@@ -89,6 +89,8 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
     })
 
   const onKeyDown = (e: KeyboardEvent<HTMLUListElement>) => {
+    // Hendelser fra innebygde kontroller (f.eks. syklus-lenken) håndteres av kontrollen selv
+    if (e.target !== refs.current.get(rows.find((r) => r.node.id === activeId)?.node.id ?? '')) return
     const idx = rows.findIndex((r) => r.node.id === activeId)
     if (idx < 0) return
     const row = rows[idx]
@@ -117,6 +119,7 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
       case 'Enter':
       case ' ':
         setSelectedId(row.node.id)
+        if (row.node.kind === 'element' && row.node.cycle) onNavigate({ element: row.node.name })
         break
       default:
         return
@@ -138,6 +141,7 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
             <button
               type="button"
               className="structure-tab__link"
+              tabIndex={-1}
               onClick={(e) => {
                 e.stopPropagation()
                 onNavigate({ element: n.name })

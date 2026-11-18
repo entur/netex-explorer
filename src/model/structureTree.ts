@@ -29,11 +29,14 @@ export function fieldNodes(fields: Field[], data?: VersionData, prefix = ''): Tr
   const nodes: TreeNode[] = []
   const choices = new Map<string, Extract<TreeNode, { kind: 'choice' }>>()
   let lastOrigin: string | null = null
-  for (const f of fields) {
-    if (f.origin !== lastOrigin) {
-      nodes.push({ kind: 'divider', origin: f.origin })
-      lastOrigin = f.origin
+  const push = (origin: string, node: TreeNode) => {
+    if (origin !== lastOrigin) {
+      nodes.push({ kind: 'divider', origin })
+      lastOrigin = origin
     }
+    nodes.push(node)
+  }
+  for (const f of fields) {
     if (f.choice) {
       let choice = choices.get(f.choice.id)
       if (!choice) {
@@ -45,11 +48,11 @@ export function fieldNodes(fields: Field[], data?: VersionData, prefix = ''): Tr
           children: [],
         }
         choices.set(f.choice.id, choice)
-        nodes.push(choice)
+        push(f.origin, choice)
       }
       choice.children.push(fieldNode(f, `${choice.id}/`, data))
     } else {
-      nodes.push(fieldNode(f, prefix, data))
+      push(f.origin, fieldNode(f, prefix, data))
     }
   }
   return nodes

@@ -62,4 +62,21 @@ describe('StructureTab', () => {
     await user.click(screen.getByRole('button', { name: /Quay.*syklus/ }))
     expect(calls).toEqual([{ element: 'Quay' }])
   })
+
+  it('Enter on a focused cycle row navigates to that element', async () => {
+    const user = userEvent.setup()
+    const calls: unknown[] = []
+    setup((t) => calls.push(t))
+    await user.click(screen.getByRole('treeitem', { name: /quays/ }))
+    await user.keyboard('{ArrowRight}')
+    await user.click(screen.getByRole('treeitem', { name: /^Quay\b/ }))
+    await user.keyboard('{ArrowRight}') // Quay expanded
+    await user.click(screen.getAllByRole('treeitem', { name: /quays/ })[1])
+    await user.keyboard('{ArrowRight}{ArrowDown}')
+    const cycle = screen.getByRole('button', { name: /syklus/ }).closest('[role="treeitem"]') as HTMLElement
+    expect(cycle).toHaveFocus()
+    expect(screen.getByRole('button', { name: /syklus/ })).toHaveAttribute('tabindex', '-1')
+    await user.keyboard('{Enter}')
+    expect(calls).toEqual([{ element: 'Quay' }])
+  })
 })

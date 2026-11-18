@@ -65,3 +65,14 @@ describe('childNodes', () => {
     expect(keyList.kind === 'field' && keyList.expandable).toBe(false)
   })
 })
+
+describe('fieldNodes dividers', () => {
+  it('emits no orphan divider for a field absorbed into an earlier choice', () => {
+    const f = (name: string, origin: string, choice?: string) => ({
+      ...stopPlace.fields[0], name, origin, isAttribute: false, choice: choice ? { id: choice, minOccurs: '0', maxOccurs: '1' } : undefined,
+    })
+    const el = { ...stopPlace, fields: [f('a', 'X'), f('n1', 'Y', 'c'), f('b', 'X'), f('n2', 'Y', 'c'), f('d', 'X')] }
+    const dividers = rootNodes(el, fixture).filter((n) => n.kind === 'divider').map((n) => (n as { origin: string }).origin)
+    expect(dividers).toEqual(['X', 'Y', 'X'])
+  })
+})
