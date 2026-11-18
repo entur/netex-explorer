@@ -59,10 +59,16 @@ describe('promptFor', () => {
     expect(Object.keys(schema.properties.fields.properties)).toEqual(['Name', 'TransportMode'])
     expect(schema.properties.fields.properties.Name).toEqual({ type: 'STRING' })
   })
+  it('schema krever type og fields, og alle feltnavn', () => {
+    const { schema } = promptFor(typeReq)
+    expect(schema.required).toEqual(['type', 'fields'])
+    expect(schema.properties.fields.required).toEqual(['Name', 'TransportMode'])
+  })
   it('schema for type uten felt utelater fields', () => {
     const { schema } = promptFor(emptyReq)
     expect(schema.properties.fields).toBeUndefined()
     expect(schema.properties.type).toEqual({ type: 'STRING', nullable: true })
+    expect(schema.required).toEqual(['type'])
   })
   it('schema for enum er en streng', () => {
     const { schema } = promptFor(enumReq)

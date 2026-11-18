@@ -5,7 +5,9 @@ const erGjentakbar = (err) => err?.status === undefined || err.status === 429 ||
 /**
  * Kjører forespørslene mot klienten og fyller hurtigbufferen.
  * Muterer `cache`; `onEntry` kalles etter hver ny oppføring.
- * Returnerer antall lagde, mislykkede og (pga. tak) hoppede forespørsler.
+ * `onFail(request, reason)` kalles for hver mislykket forespørsel; reason er Error eller 'ugyldig svar'.
+ * Etter `maxConsecutiveErrors` påfølgende kastede feil (etter nye forsøk) startes ingen nye forespørsler.
+ * Returnerer { made, failed, skipped, errors, invalid, aborted? }; failed = errors + invalid.
  */
 export async function runExplain({
   requests,
@@ -16,6 +18,8 @@ export async function runExplain({
   retries = 3,
   sleep = (ms) => new Promise((r) => setTimeout(r, ms)),
   onEntry = () => {},
+  onFail = () => {},
+  maxConsecutiveErrors = 20,
   now = () => new Date().toISOString(),
 }) {
   // Utelat treff i hurtigbufferen og duplikate nøkler; behold rekkefølgen
@@ -27,7 +31,8 @@ export async function runExplain({
     todo.push(r)
   }
   const queue = todo.slice(0, maxRequests)
-  const result = { made: 0, failed: 0, skipped: todo.length - queue.length }
+  const result = { made: 0, failed: 0, skipped: todo.length - queue.length, errors: 0, invalid: 0 }
+  let consecutiveErrors = 0
 
   async function generate(request) {
     const prompt = promptFor(request)
@@ -41,15 +46,21 @@ export async function runExplain({
     }
   }
 
-  async function process(request) {
+  async function explainOne(request) {
     let output = null
+    let reason = 'ugyldig svar'
     try {
       output = validate(request, await generate(request))
-    } catch {
-      output = null
+      consecutiveErrors = 0
+    } catch (err) {
+      reason = err
+      consecutiveErrors++
     }
     if (!output) {
+      if (reason === 'ugyldig svar') result.invalid++
+      else result.errors++
       result.failed++
+      onFail(request, reason)
       return
     }
     cache[request.key] = { id: request.id, output, createdAt: now() }
@@ -59,8 +70,16 @@ export async function runExplain({
 
   let next = 0
   const worker = async () => {
-    while (next < queue.length) await process(queue[next++])
+    while (next < queue.length) {
+      if (consecutiveErrors >= maxConsecutiveErrors) {
+        result.aborted = true
+        return
+      }
+      await explainOne(queue[next++])
+    }
   }
   await Promise.all(Array.from({ length: Math.max(1, Math.min(concurrency, queue.length)) }, worker))
+  // Forespørsler som ikke ble startet etter avbrudd regnes som utsatt
+  result.skipped += queue.length - next
   return result
 }

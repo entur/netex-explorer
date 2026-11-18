@@ -42,9 +42,12 @@ const maxRequests = parseMaxRequests(process.env.MAX_REQUESTS)
 
 // 1. Last versjonene
 const manifest = readJson(join(DATA_DIR, 'versions.json'), { versions: [] })
+// Appens standardversjon (DEFAULT_VERSION i src/model/urlState.ts) først, så taket fyller det brukerne ser først
+const DEFAULT_VERSION = 'v2.0'
 const versions = manifest.versions
   .filter((v) => !v.error && v.file)
   .map((v) => JSON.parse(readFileSync(join(DATA_DIR, v.file), 'utf8')))
+  .sort((a, b) => (b.version === DEFAULT_VERSION) - (a.version === DEFAULT_VERSION))
 
 // 2. Forespørsler og hurtigbuffer
 const { requests, byVersion } = withKeys(buildRequests(versions), MODEL, PROMPT_VERSION)
@@ -52,7 +55,7 @@ const cache = readJson(CACHE_PATH, {})
 const missing = requests.some((r) => !cache[r.key])
 
 // 3. Kall modellen om det trengs
-let result = { made: 0, failed: 0, skipped: 0 }
+let result = { made: 0, failed: 0, skipped: 0, errors: 0, invalid: 0 }
 if (maxRequests > 0 && missing) {
   if (!PROJECT) fail('GOOGLE_CLOUD_PROJECT må settes for å generere forklaringer')
   const { createGeminiClient } = await import('./explain/gemini.js')
@@ -64,6 +67,9 @@ if (maxRequests > 0 && missing) {
       cache,
       client,
       maxRequests,
+      onFail: (request, reason) => {
+        console.error(`Feilet: ${request.id} — ${reason instanceof Error ? reason.message : reason}`)
+      },
       onEntry: () => {
         if (++sinceSave >= SAVE_EVERY) {
           sinceSave = 0
@@ -101,5 +107,9 @@ for (const { version } of versions) {
 writeFileSync(SUMMARY_PATH, summarize(before, after, { model: MODEL }))
 
 // 6. Logg og avslutt
-console.log(`laget ${result.made}, feilet ${result.failed}, utsatt ${result.skipped}, fjernet fra hurtigbuffer ${removed}`)
-if (result.made === 0 && result.failed > 0) process.exit(1)
+console.log(
+  `laget ${result.made}, feilet ${result.errors} (feil) + ${result.invalid} (ugyldig svar), utsatt ${result.skipped}, fjernet fra hurtigbuffer ${removed}`,
+)
+if (result.aborted) console.error('Avbrutt: for mange påfølgende feil')
+// Ugyldige svar alene feiler ikke jobben; avbrudd eller bare feil uten fremgang gjør det
+if (result.aborted || (result.errors > 0 && result.made === 0)) process.exit(1)
