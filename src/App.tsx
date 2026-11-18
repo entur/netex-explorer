@@ -1,37 +1,17 @@
 import { useState, useEffect } from 'react'
-import type { NeTExElement, LoadedFile, NeTExExample, ProfileData, ActiveProfile, StructureNode, ProfileStructure, NeTExEnums, VersionManifest, VersionData } from './types'
+import type { NeTExElement, LoadedFile, NeTExExample, NeTExEnums, VersionManifest, VersionData } from './types'
 import { PARTS } from './constants'
 import elementsData from './data/netex-elements.json'
 import examplesData from './data/netex-examples.json'
 import enumsData from './data/netex-enums.json'
-import frProfileData from './data/profiles/fr.json'
-import nordicProfileData from './data/profiles/nordic.json'
-import ukProfileData from './data/profiles/uk.json'
-import frStructureData from './data/profiles/fr-structure.json'
-import nordicStructureData from './data/profiles/nordic-structure.json'
-import ukStructureData from './data/profiles/uk-structure.json'
 import { SearchBar } from './components/SearchBar'
 import { ElementTree } from './components/ElementTree'
 import { AttributePanel } from './components/AttributePanel'
 import { ExampleLoader } from './components/ExampleLoader'
-import { ProfileStructureTree } from './components/ProfileStructureTree'
-import { ProfileGuidePanel } from './components/ProfileGuidePanel'
 
 const allElements = elementsData as NeTExElement[]
 const allExamples = examplesData as NeTExExample[]
 const allEnums = enumsData as NeTExEnums
-
-const PROFILES: Record<string, ProfileData> = {
-  fr: frProfileData as ProfileData,
-  nordic: nordicProfileData as ProfileData,
-  uk: ukProfileData as ProfileData,
-}
-
-const PROFILE_STRUCTURES: Record<string, ProfileStructure> = {
-  fr: frStructureData as ProfileStructure,
-  nordic: nordicStructureData as ProfileStructure,
-  uk: ukStructureData as ProfileStructure,
-}
 
 function PartDescriptionCard({ activePart, allElements }: { activePart: 1 | 2 | 3; allElements: NeTExElement[] }) {
   const partDef = PARTS.find((p) => p.key === activePart)
@@ -54,22 +34,10 @@ function PartDescriptionCard({ activePart, allElements }: { activePart: 1 | 2 | 
   )
 }
 
-function findPath(node: StructureNode, targetId: string, path: string[] = []): string[] | null {
-  const current = [...path, node.label]
-  if (node.id === targetId) return current
-  for (const child of node.children) {
-    const result = findPath(child, targetId, current)
-    if (result) return result
-  }
-  return null
-}
-
 export default function App() {
   const [activePart, setActivePart] = useState<1 | 2 | 3 | null>(null)
   const [selectedElement, setSelectedElement] = useState<NeTExElement | null>(null)
   const [loadedFile, setLoadedFile] = useState<LoadedFile | null>(null)
-  const [activeProfile, setActiveProfile] = useState<ActiveProfile>(null)
-  const [selectedNode, setSelectedNode] = useState<StructureNode | null>(null)
   const [netexVersion, setNetexVersion] = useState<string>('v2.0')
   const [availableVersions, setAvailableVersions] = useState<string[]>(['v2.0'])
   const [versionData, setVersionData] = useState<{ elements: NeTExElement[], enums: NeTExEnums, examples: NeTExExample[] }>({
@@ -129,24 +97,12 @@ export default function App() {
     loadVersionData()
   }, [netexVersion])
 
-  const profileData = activeProfile ? PROFILES[activeProfile] : null
-  const structureData = activeProfile ? PROFILE_STRUCTURES[activeProfile] : null
-
-  function handleProfileChange(p: ActiveProfile) {
-    setActiveProfile(p)
-    setSelectedNode(null)
-  }
-
   function handleVersionChange(newVersion: string) {
     setNetexVersion(newVersion)
     // Reset selections when changing version
     setSelectedElement(null)
     setActivePart(null)
   }
-
-  const selectedNodePath = selectedNode && structureData
-    ? findPath(structureData.root, selectedNode.id) ?? []
-    : []
 
   return (
     <div style={{
@@ -177,20 +133,10 @@ export default function App() {
           NeTEx-utforsker
         </span>
 
-        {activeProfile ? (
-          <span style={{ fontSize: '13px', color: 'var(--colors-greys-grey50, #888)', fontStyle: 'italic' }}>
-            {activeProfile === 'nordic'
-              ? '🇳🇴 Nordisk profil — eksportstruktur'
-              : activeProfile === 'uk'
-              ? '🇬🇧 Britisk profil — eksportstruktur'
-              : '🇫🇷 Fransk profil — eksportstruktur'}
-          </span>
-        ) : (
-          <SearchBar
-            activePart={activePart}
-            onPartChange={(p) => { setActivePart(p); setSelectedElement(null) }}
-          />
-        )}
+        <SearchBar
+          activePart={activePart}
+          onPartChange={(p) => { setActivePart(p); setSelectedElement(null) }}
+        />
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -256,28 +202,14 @@ export default function App() {
           display: 'flex',
           flexDirection: 'column',
         }}>
-          {activeProfile && structureData ? (
-            <ProfileStructureTree
-              structure={structureData}
-              profileData={profileData}
-              selectedNode={selectedNode}
-              onSelect={setSelectedNode}
-              activeProfile={activeProfile}
-              onProfileChange={handleProfileChange}
-            />
-          ) : (
-            <ElementTree
-              elements={versionData.elements}
-              activePart={activePart}
-              selectedElement={selectedElement}
-              loadedFile={loadedFile}
-              onSelect={setSelectedElement}
-              profileData={profileData}
-              activeProfile={activeProfile}
-              onProfileChange={handleProfileChange}
-              enumValues={versionData.enums}
-            />
-          )}
+          <ElementTree
+            elements={versionData.elements}
+            activePart={activePart}
+            selectedElement={selectedElement}
+            loadedFile={loadedFile}
+            onSelect={setSelectedElement}
+            enumValues={versionData.enums}
+          />
         </div>
 
         {/* Right panel */}
@@ -286,33 +218,11 @@ export default function App() {
           overflowY: 'auto',
           background: 'var(--colors-greys-white, #ffffff)',
         }}>
-          {activeProfile && selectedNode ? (
-            <ProfileGuidePanel
-              node={selectedNode}
-              nodePath={selectedNodePath}
-              allElements={versionData.elements}
-              profileData={profileData}
-              activeProfile={activeProfile}
-              onSelectElement={(el) => { setActiveProfile(null); setSelectedElement(el) }}
-            />
-          ) : activeProfile ? (
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              height: '100%',
-              color: 'var(--colors-greys-grey50, #888)',
-              fontSize: '14px',
-            }}>
-              Velg et element i eksportstrukturen til venstre
-            </div>
-          ) : selectedElement ? (
+          {selectedElement ? (
             <AttributePanel
               element={selectedElement}
               allElements={versionData.elements}
               loadedFile={loadedFile}
-              profileData={profileData}
-              activeProfile={activeProfile}
               onSelect={setSelectedElement}
               enumValues={versionData.enums}
             />

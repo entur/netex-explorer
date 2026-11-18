@@ -109,40 +109,6 @@ export interface LoadedFile {
   instanceMap: InstanceMap
 }
 
-// --- Profile annotation types ---
-
-export type ProfileStatus = 'required' | 'optional' | 'not-in-profile'
-
-export interface ProfileElementData {
-  status: ProfileStatus
-  attributes: Record<string, ProfileStatus>
-}
-
-/** Keyed by NeTEx element name, e.g. "PreassignedFareProduct" */
-export type ProfileData = Record<string, ProfileElementData>
-
-export type ActiveProfile = 'fr' | 'nordic' | 'uk' | null
-
-// --- Profile structure guide types ---
-
-export type StructureNodeType = 'container' | 'collection' | 'element'
-
-export interface StructureNode {
-  id: string
-  type: StructureNodeType
-  label: string
-  description: string
-  xmlSnippet: string
-  elementRef?: string        // only for type === 'element'; matches NeTExElement.name
-  children: StructureNode[]
-}
-
-export interface ProfileStructure {
-  profile: string
-  label: string
-  root: StructureNode
-}
-
 /** Maps enum type name to array of allowed values */
 export type NeTExEnums = Record<string, string[]>
 

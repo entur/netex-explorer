@@ -3,14 +3,12 @@ import { Tabs, TabList, Tab, TabPanels, TabPanel } from '@entur/tab'
 import { Table, TableHead, TableBody, TableRow, HeaderCell, DataCell } from '@entur/table'
 import { ExpandablePanel } from '@entur/expand'
 import { Label } from '@entur/typography'
-import type { NeTExElement, LoadedFile, NeTExAttribute, NeTExInheritedAttribute, ProfileData, ActiveProfile, ProfileStatus, NeTExEnums } from '../types'
+import type { NeTExElement, LoadedFile, NeTExAttribute, NeTExInheritedAttribute, NeTExEnums } from '../types'
 
 interface AttributePanelProps {
   element: NeTExElement
   allElements: NeTExElement[]
   loadedFile: LoadedFile | null
-  profileData: ProfileData | null
-  activeProfile: ActiveProfile
   onSelect?: (el: NeTExElement) => void
   enumValues?: NeTExEnums
 }
@@ -71,27 +69,6 @@ const GROUP_COLOURS: Record<string, string> = {
   ValidableElement: '#d84315',
 }
 
-const PROFILE_LABEL: Record<string, string> = {
-  fr: '🇫🇷',
-  nordic: '🇳🇴',
-}
-
-const BADGE_CONFIG: Record<ProfileStatus, { bg: string; color: string; label: string; fw?: number }> = {
-  required:       { bg: '#e8f5e9', color: '#2e7d32', label: 'påkrevd', fw: 600 },
-  optional:       { bg: '#e3f2fd', color: '#1565c0', label: 'valgfri', fw: 600 },
-  'not-in-profile': { bg: '#f5f5f5', color: '#aaa',    label: 'ikke i profil' },
-}
-
-function ProfileAttrBadge({ status }: { status: ProfileStatus | undefined }) {
-  if (!status) return null
-  const { bg, color, label, fw } = BADGE_CONFIG[status]
-  return (
-    <span style={{ background: bg, color, fontSize: '9px', padding: '1px 6px', borderRadius: '6px', fontWeight: fw, whiteSpace: 'nowrap' }}>
-      {label}
-    </span>
-  )
-}
-
 function cardinality(attr: NeTExAttribute | NeTExInheritedAttribute) {
   const max = attr.maxOccurs === 'unbounded' ? '∞' : attr.maxOccurs
   return `${attr.minOccurs}..${max}`
@@ -100,8 +77,6 @@ function cardinality(attr: NeTExAttribute | NeTExInheritedAttribute) {
 export interface SchemaTabProps {
   element: NeTExElement
   allElements: NeTExElement[]
-  profileData: ProfileData | null
-  activeProfile: ActiveProfile
   onSelect?: (el: NeTExElement) => void
   enumValues?: NeTExEnums
 }
@@ -142,22 +117,17 @@ function findLinkedElement(type: string, kind: string, allElements: NeTExElement
   return null
 }
 
-export function SchemaTab({ element, allElements, profileData, activeProfile, onSelect, enumValues }: SchemaTabProps) {
+export function SchemaTab({ element, allElements, onSelect, enumValues }: SchemaTabProps) {
   const byAncestor = new Map<string, NeTExInheritedAttribute[]>()
   for (const a of element.inheritedAttributes) {
     if (!byAncestor.has(a.inheritedFrom)) byAncestor.set(a.inheritedFrom, [])
     byAncestor.get(a.inheritedFrom)!.push(a)
   }
 
-  const elementProfile = profileData?.[element.name]
-  const showProfileCol = !!profileData
-
   function attrRow(a: NeTExAttribute | NeTExInheritedAttribute) {
-    const attrStatus = elementProfile?.attributes[a.name]
-    const notInProfile = attrStatus === 'not-in-profile'
     return (
-      <TableRow key={a.name} style={{ opacity: notInProfile ? 0.4 : 1 }}>
-        <DataCell style={{ textDecoration: notInProfile ? 'line-through' : 'none' }}>{a.name}</DataCell>
+      <TableRow key={a.name}>
+        <DataCell>{a.name}</DataCell>
         <DataCell>
           <span style={{ fontFamily: 'monospace', color: KIND_COLOUR[a.kind] ?? '#555' }}>{a.kind}</span>
           {(() => {
@@ -208,7 +178,6 @@ export function SchemaTab({ element, allElements, profileData, activeProfile, on
             )
           })()}
         </DataCell>
-        {showProfileCol && <DataCell align="center"><ProfileAttrBadge status={attrStatus} /></DataCell>}
       </TableRow>
     )
   }
@@ -241,7 +210,6 @@ export function SchemaTab({ element, allElements, profileData, activeProfile, on
                 <HeaderCell>Type</HeaderCell>
                 <HeaderCell align="center">Kard.</HeaderCell>
                 <HeaderCell>Beskrivelse</HeaderCell>
-                {showProfileCol && <HeaderCell align="center">{activeProfile ? PROFILE_LABEL[activeProfile] : ''} Profil</HeaderCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -263,7 +231,6 @@ export function SchemaTab({ element, allElements, profileData, activeProfile, on
                       <HeaderCell>Type</HeaderCell>
                       <HeaderCell align="center">Kard.</HeaderCell>
                       <HeaderCell>Beskrivelse</HeaderCell>
-                      {showProfileCol && <HeaderCell align="center">{activeProfile ? PROFILE_LABEL[activeProfile] : ''} Profil</HeaderCell>}
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -354,7 +321,7 @@ function InstanceTab({ element, loadedFile }: { element: NeTExElement; loadedFil
   )
 }
 
-export function AttributePanel({ element, allElements, loadedFile, profileData, activeProfile, onSelect, enumValues }: AttributePanelProps) {
+export function AttributePanel({ element, allElements, loadedFile, onSelect, enumValues }: AttributePanelProps) {
   // Check if this is an enum (virtual element from Enumerations group)
   const isEnum = element.group === 'Enumerations'
   const enumVals = isEnum ? enumValues?.[element.name] : undefined
@@ -433,7 +400,6 @@ export function AttributePanel({ element, allElements, loadedFile, profileData, 
   const [activeTabIdx, setActiveTabIdx] = useState(0)
   const groupColour = GROUP_COLOURS[element.group] ?? '#555'
   const hasInstances = !!loadedFile?.instanceMap[element.name]?.length
-  const elementProfileStatus = profileData?.[element.name]?.status
 
   return (
     <div>
@@ -446,16 +412,6 @@ export function AttributePanel({ element, allElements, loadedFile, profileData, 
           <span style={{ fontSize: '12px', padding: '2px 8px', borderRadius: '9999px', background: 'var(--colors-greys-grey90, #f8f8f8)', color: groupColour, border: '1px solid var(--colors-greys-grey80, #e0e0e0)' }}>
             {element.group}
           </span>
-          {elementProfileStatus && elementProfileStatus !== 'not-in-profile' && (
-            <span style={{ fontSize: '11px', background: elementProfileStatus === 'required' ? '#e8f5e9' : '#e3f2fd', color: elementProfileStatus === 'required' ? '#2e7d32' : '#1565c0', padding: '2px 8px', borderRadius: '10px', fontWeight: 600 }}>
-              {elementProfileStatus === 'required' ? '✓ Påkrevd' : '~ Valgfri'} — {activeProfile === 'fr' ? 'Fransk profil' : 'Nordisk profil'}
-            </span>
-          )}
-          {elementProfileStatus === 'not-in-profile' && (
-            <span style={{ fontSize: '11px', background: '#f5f5f5', color: '#aaa', padding: '2px 8px', borderRadius: '10px' }}>
-              ✕ Ikke i profil
-            </span>
-          )}
           {hasInstances && (
             <span style={{ fontSize: '12px', color: 'var(--colors-brand-coral, #ff6c6c)', marginLeft: '4px' }}>
               {loadedFile!.instanceMap[element.name].length} instanser i filen
@@ -495,7 +451,7 @@ export function AttributePanel({ element, allElements, loadedFile, profileData, 
         </TabList>
         <TabPanels>
           <TabPanel>
-            <SchemaTab element={element} allElements={allElements} profileData={profileData} activeProfile={activeProfile} onSelect={onSelect} enumValues={enumValues} />
+            <SchemaTab element={element} allElements={allElements} onSelect={onSelect} enumValues={enumValues} />
           </TabPanel>
           <TabPanel>
             {loadedFile && <InstanceTab element={element} loadedFile={loadedFile} />}

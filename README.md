@@ -6,7 +6,6 @@ En interaktiv applikasjon for å utforske NeTEx-standarden (Network Timetable Ex
 
 - 📊 Utforsk NeTEx-elementene organisert i 3 deler (Nettverk, Rutetabeller, Billetter)
 - 🔍 Søk etter elementer og attributter
-- 🌍 Se nasjonale profiler (Nordisk, Britisk, Fransk)
 - 📚 Vis eksempeldata og validering
 - 🔢 Utforsk enumerasjoner med gyldige verdier
 - 🔄 Velg mellom ulike NeTEx-versjoner (v1.3, v2.0, v2.1-wip, v3.0-wip)
@@ -78,14 +77,6 @@ Appen henter nå data fra alle undermapper i `netex_framework`:
 - `netex_responsibility` - Ansvarsområder
 - `netex_reusableComponents` - Gjenbrukbare komponenter
 - `netex_utility` - Hjelpefunksjoner
-
-## Nasjonale profiler
-
-Appen støtter visning av nasjonale NeTEx-profiler:
-
-- 🇳🇴 **Nordisk profil** - Felles profil for Norge, Sverige, Danmark
-- 🇬🇧 **Britisk profil** - UK Bus Open Data Service
-- 🇫🇷 **Fransk profil** - Profil France
 
 ## Testing
 
