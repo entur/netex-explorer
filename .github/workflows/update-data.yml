@@ -74,6 +74,9 @@ jobs:
   # Kjører etter update også når ingen data er endret. Feiler jobben, påvirkes ikke update/deploy.
   explain:
     needs: update
+    concurrency:
+      group: ki-forklaringer
+      cancel-in-progress: false
     if: ${{ vars.GOOGLE_CLOUD_PROJECT != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
     runs-on: ubuntu-latest
     permissions:
@@ -95,6 +98,14 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      # Hent hurtigbufferen fra den åpne PR-grenen, så uferdig arbeid og rettelser ikke går tapt.
+      # Versjonsfilene beholdes fra main, så PR-oppsummeringen sammenlignes mot main.
+      - name: Restore cache from open PR branch
+        run: |
+          git fetch --depth=1 origin ki-forklaringer \
+            && git checkout FETCH_HEAD -- data/explanations-cache.json \
+            || echo "Ingen åpen ki-forklaringer-branch"
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2

@@ -80,15 +80,21 @@ lagres som `public/data/explanations-<versjon>.json`; appen kaller aldri en KI-m
 
 KI-tekst kommer aldri direkte på `main`. Jobben `explain` i `update-data.yml` kjører hver natt etter dataoppdateringen
 (også når ingen data er endret), og åpner en PR fra den faste grenen `ki-forklaringer` til `main`. Grenen lages på nytt
-fra `main` hver natt; er det ingen endringer, blir ingen PR åpnet (og en åpen en lukkes). Dataoppdateringen
+fra `main` hver natt, men jobben henter først `data/explanations-cache.json` fra den åpne PR-grenen, slik at
+uferdig arbeid og rettelser fortsetter; er det ingen endringer, blir ingen PR åpnet (og en åpen en lukkes). Dataoppdateringen
 (`update`-jobben) committer bare XSD-data og tar aldri med `explanations-*.json`. Feiler `explain`, feiler bare den jobben.
 Jobben kjører bare når repo-variablene `GOOGLE_CLOUD_PROJECT`, `GCP_WIF_PROVIDER` og `GCP_SERVICE_ACCOUNT` er satt.
 
 ### Gjennomgang av PR-en
 
 PR-beskrivelsen (`explain-summary.md`) oppsummerer hva som er nytt, endret og fjernet. Den første PR-en inneholder
-rundt 6000 tekster; gjør stikkprøver på tvers av versjoner og elementtyper i stedet for å lese alt. Senere PR-er er
-små. Merge først når tekstene ser riktige ut; rett opp feil direkte i PR-grenen.
+rundt 2800 kall som gir omtrent 12 000 unike tekster (rundt 6800 per versjonsfil). Hver versjonsfil er stor, så
+første diff er flere MB og GitHub viser ikke diffen av hurtigbufferen. Sjekk heller ut `ki-forklaringer` lokalt, kjør
+`npm run dev` og gjør stikkprøver på tvers av versjoner og elementtyper i stedet for å lese alt. Senere PR-er er små.
+Merge først når tekstene ser riktige ut.
+
+Rett opp en tekst ved å endre `output` i oppføringen i `data/explanations-cache.json` (på PR-grenen eller i en
+oppfølgings-PR). Ikke rediger `public/data/explanations-*.json`; de bygges på nytt fra hurtigbufferen hver kjøring.
 
 ### Kjøre lokalt
 
@@ -104,8 +110,13 @@ GOOGLE_CLOUD_PROJECT=<prosjekt-id> MAX_REQUESTS=20 npm run explain   # prøvekj�
 | `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Modellen som brukes |
 | `MAX_REQUESTS` | `2000` | Tak på antall kall per kjøring |
 
-Første fulle kjøring trenger rundt 2800 kall på tvers av de fire versjonene, altså mer enn standardtaket. Da tar den to
-netter, eller kjør `update-data.yml` manuelt (`workflow_dispatch`) og sett inputen `max_requests` høyere.
+Første fulle kjøring trenger rundt 2800 kall på tvers av de fire versjonene, altså mer enn standardtaket. Siden
+hurtigbufferen føres videre fra PR-grenen, fortsetter uferdig arbeid neste natt: to netter med standardtaket, eller én
+kjøring av `update-data.yml` manuelt (`workflow_dispatch`) med `max_requests=3000`.
+
+Etter at du har endret `GEMINI_MODEL` eller `PROMPT_VERSION` (i `scripts/explain/prompt.js`), må alle tekster lages på
+nytt. Kjør da `workflow_dispatch` med `max_requests=3000`; ellers viser PR-en rundt 30 % av tekstene som fjernet i en
+natt. Standardversjonen (v2.0) forklares først, så et tak fyller det brukerne ser først.
 
 ### Oppsett utenfor repoet
 
