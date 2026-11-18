@@ -6,6 +6,7 @@ import type { LoadedFile, VersionData } from '../types'
 import { humanizeModule } from '../model/navigation'
 import { AncestorPills } from './AncestorPills'
 import { FieldsTab } from './FieldsTab'
+import { StructureTab } from './StructureTab'
 import { InstanceTab } from './InstanceTab'
 import './ElementPage.css'
 
@@ -58,7 +59,7 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
             <FieldsTab element={element} data={data} originFilter={originFilter} onNavigate={onNavigate} />
           </TabPanel>
           <TabPanel>
-            <p className="element-page__placeholder">Strukturvisning kommer.</p>
+            <StructureTab key={element.name} element={element} data={data} onNavigate={onNavigate} />
           </TabPanel>
           <TabPanel>{file && <InstanceTab element={element} loadedFile={file} />}</TabPanel>
         </TabPanels>
