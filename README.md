@@ -2,6 +2,8 @@
 
 Interaktiv utforsker for NeTEx-standarden (Network Timetable Exchange), bygget med Entur sitt designsystem Linje.
 
+Appen ligger på <https://entur.github.io/netex-explorer/>.
+
 ## Funksjoner
 
 - Elementer gruppert etter del og modul, med søk i elementer og felter (også arvede)
@@ -43,7 +45,7 @@ Appen kan ligge under en understi. Sett `BASE_PATH` ved bygging (Vite `base`); u
 All lenking og datahenting går via `import.meta.env.BASE_URL`.
 
 ```bash
-BASE_PATH=/netex-overview/ npm run build
+BASE_PATH=/netex-explorer/ npm run build
 ```
 
 #### Uniformen
@@ -55,8 +57,19 @@ Feiler kallet, bygges appen uten skall.
 ### Skrifter
 
 Skriften Nationale kommer fra `@entur/typography`, som leverer `@font-face` og skriftfilene, og de blir med i bygget.
-Arial brukes bare som reserve. Nationale er lisensiert for offisielle Entur-produkter, som appen skal være når den flyttes til
-Entur-organisasjonen.
+Arial brukes bare som reserve. Nationale er lisensiert for offisielle Entur-produkter.
+
+## Publisering
+
+Appen hostes på GitHub Pages og bygges og publiseres av `.github/workflows/deploy-pages.yml`:
+
+- ved hver push til `main`
+- manuelt fra Actions-fanen (`workflow_dispatch`)
+- etter den nattlige dataoppdateringen (`update-data.yml`), når den har committet nye data. Den commiten bruker
+  `[skip ci]`, så den starter ikke publiseringen av seg selv; `update-data.yml` kaller derfor `deploy-pages.yml` direkte.
+
+Bygget kjører testene først, og `BASE_PATH` settes fra Pages-oppsettet (`/netex-explorer/`). Pages må være satt opp med
+**Source: GitHub Actions** under *Settings → Pages* i repoet.
 
 ## NeTEx-versjoner
 
