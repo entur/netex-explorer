@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { TertiaryButton, PrimaryButton } from '@entur/button'
+import { SecondaryButton, PrimaryButton } from '@entur/button'
 import { Modal } from '@entur/modal'
 import { TextArea } from '@entur/form'
 import type { NeTExExample, LoadedFile } from '../types'
@@ -62,7 +62,7 @@ export function ExampleLoader({ examples, onFileLoaded }: ExampleLoaderProps) {
           <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {activeFilename}
           </span>
-          <TertiaryButton onClick={clearFile}>✕</TertiaryButton>
+          <SecondaryButton size="small" onClick={clearFile}>✕</SecondaryButton>
         </div>
       ) : (
         <span style={{ fontSize: '11px', color: 'var(--colors-greys-grey50, #888)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
@@ -186,9 +186,9 @@ export function ExampleLoader({ examples, onFileLoaded }: ExampleLoaderProps) {
           placeholder="<PublicationDelivery ...>...</PublicationDelivery>"
         />
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-          <TertiaryButton onClick={() => { setPasteOpen(false); setPasteXml('') }}>
+          <SecondaryButton size="small" onClick={() => { setPasteOpen(false); setPasteXml('') }}>
             Avbryt
-          </TertiaryButton>
+          </SecondaryButton>
           <PrimaryButton onClick={handlePaste}>
             Last inn
           </PrimaryButton>

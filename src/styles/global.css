@@ -1,0 +1,52 @@
+@import '@entur/tokens/dist/base.css';
+@import '@entur/tokens/dist/styles.css';
+@import '@entur/a11y/dist/styles.css';
+@import '@entur/icons/dist/styles.css';
+@import '@entur/tab/dist/styles.css';
+@import '@entur/typography/dist/styles.css';
+@import '@entur/layout/dist/styles.css';
+@import '@entur/loader/dist/styles.css';
+@import '@entur/expand/dist/styles.css';
+@import '@entur/button/dist/styles.css';
+@import '@entur/alert/dist/styles.css';
+@import '@entur/menu/dist/styles.css';
+@import '@entur/modal/dist/styles.css';
+@import '@entur/tooltip/dist/styles.css';
+@import '@entur/form/dist/styles.css';
+@import '@entur/chip/dist/styles.css';
+@import '@entur/table/dist/styles.css';
+@import '@entur/dropdown/dist/styles.css';
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Fontfamilie kommer fra @entur/typography (Nationale med Arial som reserve).
+   Linje: digitale flater bruker bare vektene 500 og 600. */
+body {
+  margin: 0;
+  font-weight: 500;
+  background: var(--basecolors-frame-default);
+  color: var(--basecolors-text-accent);
+}
+
+strong,
+b,
+th {
+  font-weight: 600;
+}
+
+/* Visually hide the TextField label when used inline in a compact bar */
+.search-label-hidden label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

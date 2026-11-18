@@ -1,0 +1,35 @@
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) 1fr;
+  min-height: 100vh;
+}
+
+.app-layout__sidebar {
+  border-right: 1px solid var(--basecolors-frame-subdued);
+  background: var(--basecolors-frame-elevated);
+  padding: var(--space-medium);
+  overflow: auto;
+}
+
+.app-layout__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-layout__toolbar {
+  padding: var(--space-small) var(--space-medium);
+  border-bottom: 1px solid var(--basecolors-frame-subdued);
+}
+
+.app-layout__main {
+  flex: 1;
+  padding: var(--space-medium);
+  min-width: 0;
+}
+
+@media (max-width: 48rem) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}
