@@ -1,0 +1,21 @@
+.enum-values {
+  margin: 0;
+  padding: var(--space-small);
+}
+.enum-values__item {
+  display: flex;
+  gap: var(--space-medium);
+}
+.enum-values__value {
+  font-family: monospace;
+  min-width: 12rem;
+}
+.enum-values__description {
+  margin: 0;
+  color: var(--basecolors-text-subdued);
+}
+.enum-values__empty {
+  margin: 0;
+  padding: var(--space-small);
+  color: var(--basecolors-text-subdued);
+}

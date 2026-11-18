@@ -1,22 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { BannerAlertBox } from '@entur/alert'
 import { Loader } from '@entur/loader'
+import { ElementPage } from './components/ElementPage'
 import { AppLayout } from './components/AppLayout'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
 import { fetchManifest, fetchVersion } from './data/loadVersion'
 import { readUrlState, toSearch, type UrlState } from './model/urlState'
 import type { LoadedFile, VersionData } from './types'
-
-/** Midlertidig stub til oppgave 8 erstatter den med ElementPage. */
-function ElementPage({ element, enumName, file }: { element?: string; enumName?: string; file: LoadedFile | null }) {
-  return (
-    <div>
-      <h1>{element ?? enumName ?? 'Velg et element'}</h1>
-      {file && <p>Fil: {file.filename}</p>}
-    </div>
-  )
-}
 
 export default function App() {
   const [state, setState] = useState<UrlState>(() => readUrlState(window.location.search))
@@ -109,7 +100,18 @@ export default function App() {
       ) : (
         <>
           {notice && <BannerAlertBox variant="warning">{notice}</BannerAlertBox>}
-          <ElementPage element={state.element} enumName={state.enum} file={loadedFile} />
+          {current && state.element && current.elements.some((e) => e.name === state.element) ? (
+            <ElementPage
+              element={state.element}
+              data={current}
+              tab={state.tab}
+              onTab={(tab) => update({ ...state, tab })}
+              onNavigate={(target) => update({ v: state.v, tab: state.tab, ...target })}
+              file={loadedFile}
+            />
+          ) : (
+            !state.enum && <p>Velg et element</p>
+          )}
         </>
       )}
     </AppLayout>

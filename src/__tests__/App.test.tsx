@@ -59,7 +59,7 @@ describe('App', () => {
     window.history.replaceState(null, '', '/?element=StopPlace')
     render(<App />)
     expect(await screen.findByRole('heading', { name: 'StopPlace' })).toBeInTheDocument()
-    expect(screen.getByText('Stop place')).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation', { name: 'Elementer' })).getByText('Stop place')).toBeInTheDocument()
   })
 
   it('versjonsbytte der elementet mangler viser melding og beholder sidepanelet', async () => {

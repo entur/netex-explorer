@@ -1,0 +1,23 @@
+.fields-tab {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+}
+.fields-tab__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-small);
+}
+.fields-tab__link {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--basecolors-text-default);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.fields-tab__required {
+  color: var(--basecolors-text-default);
+  font-weight: bold;
+}

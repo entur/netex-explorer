@@ -1,0 +1,16 @@
+@import '@entur/tokens/dist/data.css';
+
+.kind-badge {
+  --kind-color: var(--basecolors-text-subdued);
+  display: inline-block;
+  padding: 0 var(--space-extra-small);
+  border: 1px solid var(--kind-color);
+  border-radius: var(--space-extra-small);
+  color: var(--kind-color);
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.kind-badge--enum { --kind-color: var(--standard-coral); }
+.kind-badge--ref { --kind-color: var(--standard-jungle); }
+.kind-badge--list { --kind-color: var(--standard-azure); }
+.kind-badge--complex { --kind-color: var(--standard-lilac); }
