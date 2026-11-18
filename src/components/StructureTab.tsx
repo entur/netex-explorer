@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { VisuallyHidden } from '@entur/a11y'
+import { Tag } from '@entur/layout'
 import type { Element, VersionData } from '../types'
 import { childNodes, rootNodes, type TreeNode } from '../model/structureTree'
 import { KindBadge } from './KindBadge'
@@ -135,7 +136,8 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
     if (n.kind === 'element') {
       return (
         <>
-          <span className="structure-tab__name">{n.name}</span>
+          <span className="structure-tab__name">{n.label}</span>
+          {n.abstract && <Tag size="small">abstrakt</Tag>}
           <span className="structure-tab__meta">{occurs(n.minOccurs, n.maxOccurs)}</span>
           {n.cycle && (
             <button
@@ -147,7 +149,7 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
                 onNavigate({ element: n.name })
               }}
             >
-              {n.name} (syklus – åpne elementet)
+              {n.label} (syklus – åpne elementet)
             </button>
           )}
         </>
@@ -182,12 +184,13 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
     }
     const exists = data.elements.some((e) => e.name === selected.name)
     return (
-      <section className="field-detail" aria-label={`Detaljer for ${selected.name}`}>
-        <h3 className="field-detail__name">{selected.name}</h3>
+      <section className="field-detail" aria-label={`Detaljer for ${selected.label}`}>
+        <h3 className="field-detail__name">{selected.label}</h3>
+        {selected.abstract && <Tag size="small">abstrakt</Tag>}
         <p>Antall: {occurs(selected.minOccurs, selected.maxOccurs)}</p>
         {exists ? (
           <button type="button" className="structure-tab__link" onClick={() => onNavigate({ element: selected.name })}>
-            Åpne {selected.name}
+            Åpne {selected.label}
           </button>
         ) : (
           <p className="structure-tab__hint">Finnes ikke som eget element i XSD-en.</p>
@@ -241,7 +244,7 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
               >
                 {it.expandable ? (it.expanded ? '▾' : '▸') : ''}
               </span>
-              {label(it)}
+              <span className="structure-tab__content">{label(it)}</span>
             </li>
           ),
         )}

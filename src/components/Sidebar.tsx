@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useId, useMemo, useState } from 'react'
 import { TextField, SegmentedControl, SegmentedChoice } from '@entur/form'
 import { SideNavigation } from '@entur/menu/beta'
 import type { VersionData } from '../types'
@@ -28,6 +28,9 @@ function href(state: UrlState, target: { element?: string; enum?: string }) {
 export function Sidebar({ data, state, onNavigate }: SidebarProps) {
   const [query, setQuery] = useState('')
   const [part, setPart] = useState<PartFilter>('alle')
+  // På smale skjermer er elementlisten foldet sammen når et element/enum er valgt (CSS skjuler den bare under 50rem)
+  const [listOpen, setListOpen] = useState(!state.element && !state.enum)
+  const listId = useId()
 
   const groups = useMemo(() => (data ? groupByModule(data.elements, part) : []), [data, part])
   const results = useMemo(() => (data ? search(data, query) : null), [data, query])
@@ -47,6 +50,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
         active={active}
         onClick={(e: React.MouseEvent) => {
           e.preventDefault()
+          setListOpen(false)
           onNavigate(target)
         }}
       >
@@ -70,6 +74,17 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
         ))}
       </SegmentedControl>
 
+      <button
+        type="button"
+        className="sidebar__toggle"
+        aria-expanded={listOpen}
+        aria-controls={listId}
+        onClick={() => setListOpen((o) => !o)}
+      >
+        {listOpen ? 'Skjul elementliste' : 'Vis elementliste'}
+      </button>
+
+      <div id={listId} className={`sidebar__listwrap${listOpen ? '' : ' sidebar__listwrap--collapsed'}`}>
       {!data ? null : hasResults && results ? (
         <SideNavigation className="sidebar__list">
           {results.elements.length > 0 && (
@@ -110,6 +125,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
           </SideNavigation>
         </>
       )}
+      </div>
     </nav>
   )
 }

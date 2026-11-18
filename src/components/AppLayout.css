@@ -1,6 +1,6 @@
 .app-layout {
   display: grid;
-  grid-template-columns: minmax(16rem, 22rem) 1fr;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
   min-height: 100vh;
 }
 
@@ -9,6 +9,7 @@
   background: var(--basecolors-frame-elevated);
   padding: var(--space-medium);
   overflow: auto;
+  min-width: 0;
 }
 
 .app-layout__content {
@@ -28,7 +29,8 @@
   min-width: 0;
 }
 
-@media (max-width: 48rem) {
+/* 50rem = Linjes «large»-brekkpunkt (--breakpoints-* kan ikke brukes i media queries) */
+@media (max-width: 49.99rem) {
   .app-layout {
     grid-template-columns: 1fr;
   }

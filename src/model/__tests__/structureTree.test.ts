@@ -76,3 +76,16 @@ describe('fieldNodes dividers', () => {
     expect(dividers).toEqual(['X', 'Y', 'X'])
   })
 })
+
+describe('childNodes with _Dummy', () => {
+  it('shows stripped label, marks abstract, and is not expandable when target is missing', () => {
+    const dummyField = { ...fixture.elements[0].fields.find((f) => f.kind === 'list')!, contains: [
+      { name: 'Ghost_Dummy', minOccurs: '0', maxOccurs: '1' },
+      { name: 'Quay_Dummy', minOccurs: '0', maxOccurs: '1' },
+    ] }
+    const node = { kind: 'field' as const, id: 'x', field: dummyField, expandable: true }
+    const kids = childNodes(node, fixture, ['StopPlace'])
+    expect(kids[0]).toMatchObject({ kind: 'element', name: 'Ghost_Dummy', label: 'Ghost', abstract: true, expandable: false })
+    expect(kids[1]).toMatchObject({ kind: 'element', name: 'Quay', label: 'Quay', abstract: true, expandable: true })
+  })
+})

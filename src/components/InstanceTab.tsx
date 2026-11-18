@@ -35,6 +35,7 @@ export function InstanceTab({ element, loadedFile }: { element: Element; loadedF
         <>
           <section>
             <Heading3>Attributtverdier</Heading3>
+            <div className="table-scroll">
             <Table>
               <TableHead>
                 <TableRow>
@@ -53,6 +54,7 @@ export function InstanceTab({ element, loadedFile }: { element: Element; loadedF
                 ))}
               </TableBody>
             </Table>
+            </div>
           </section>
 
           <section>

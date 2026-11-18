@@ -5,6 +5,7 @@ import { Tag } from '@entur/layout'
 import { Tooltip } from '@entur/tooltip'
 import { VisuallyHidden } from '@entur/a11y'
 import type { Element, Field, VersionData } from '../types'
+import { elementDisplay } from '../model/elementName'
 import { countFields, filterFields, type FieldFilter } from '../model/fieldFilters'
 import { KindBadge } from './KindBadge'
 import { EnumValueList } from './EnumValueList'
@@ -46,6 +47,16 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
       <span>{name}</span>
     )
 
+  const listItem = (name: string): ReactNode => {
+    const d = elementDisplay(name, data)
+    return (
+      <>
+        {link(d.label, { element: d.target ?? d.label }, d.target !== null)}
+        {d.abstract && <> <Tag size="small">abstrakt</Tag></>}
+      </>
+    )
+  }
+
   const typeCell = (f: Field): ReactNode => {
     if (f.kind === 'enum') return link(f.type, { enum: f.type }, !!data.enums[f.type])
     if (f.kind === 'ref') {
@@ -58,7 +69,7 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
           {f.contains.map((c, i) => (
             <span key={c.name}>
               {i > 0 && ', '}
-              {link(c.name, { element: c.name }, hasElement(c.name))}
+              {listItem(c.name)}
             </span>
           ))}
         </>
@@ -94,6 +105,7 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
           </FilterChip>
         ))}
       </div>
+      <div className="table-scroll">
       <Table>
         <TableHead>
           <TableRow>
@@ -148,6 +160,7 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
           })}
         </TableBody>
       </Table>
+      </div>
     </div>
   )
 }

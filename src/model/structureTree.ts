@@ -1,10 +1,11 @@
 import type { Element, Field, VersionData } from '../types'
+import { elementDisplay } from './elementName'
 
 export type TreeNode =
   | { kind: 'divider'; origin: string }
   | { kind: 'field'; id: string; field: Field; expandable: boolean }
   | { kind: 'choice'; id: string; minOccurs: string; maxOccurs: string; children: TreeNode[] }
-  | { kind: 'element'; id: string; name: string; minOccurs: string; maxOccurs: string; expandable: boolean; cycle: boolean }
+  | { kind: 'element'; id: string; name: string; label: string; abstract: boolean; minOccurs: string; maxOccurs: string; expandable: boolean; cycle: boolean }
 
 function fieldExpandable(f: Field, data?: VersionData): boolean {
   if (f.kind === 'list') return !!f.contains?.length
@@ -77,12 +78,16 @@ export function childNodes(node: TreeNode, data: VersionData, path: string[]): T
   const prefix = `${node.id}/`
   if (f.kind === 'list' && f.contains) {
     return f.contains.map((c): TreeNode => {
-      const exists = data.elements.some((e) => e.name === c.name)
-      const cycle = path.includes(c.name)
+      const d = elementDisplay(c.name, data)
+      const name = d.target ?? c.name
+      const exists = d.target !== null
+      const cycle = path.includes(name)
       return {
         kind: 'element',
         id: `${prefix}${c.name}`,
-        name: c.name,
+        name,
+        label: d.label,
+        abstract: d.abstract,
         minOccurs: c.minOccurs,
         maxOccurs: c.maxOccurs,
         expandable: exists && !cycle,

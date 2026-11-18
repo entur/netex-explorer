@@ -51,3 +51,9 @@ th {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Brede tabeller ruller i egen beholder i stedet for å gi horisontal sidescroll */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+}

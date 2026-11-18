@@ -4,11 +4,13 @@
 }
 .enum-values__item {
   display: flex;
-  gap: var(--space-medium);
+  flex-wrap: wrap;
+  gap: var(--space-extra-small) var(--space-medium);
 }
 .enum-values__value {
   font-family: monospace;
-  min-width: 12rem;
+  min-width: min(12rem, 100%);
+  overflow-wrap: anywhere;
 }
 .enum-values__description {
   margin: 0;

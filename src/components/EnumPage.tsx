@@ -28,6 +28,7 @@ export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
         {enumType.values.length === 0 ? (
           <p className="enum-page__empty">Ingen verdier funnet i XSD-en</p>
         ) : (
+          <div className="table-scroll">
           <Table>
             <TableHead>
               <TableRow>
@@ -44,6 +45,7 @@ export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
               ))}
             </TableBody>
           </Table>
+          </div>
         )}
       </section>
 

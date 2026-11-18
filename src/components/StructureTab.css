@@ -1,6 +1,7 @@
 .structure-tab {
+  min-width: 0;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-medium);
   align-items: start;
 }
@@ -15,15 +16,17 @@
   }
 }
 .structure-tab__tree {
+  min-width: 0;
   list-style: none;
   margin: 0;
   padding: 0;
 }
 .structure-tab__item {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-extra-small) var(--space-small);
+  /* chevron i egen kolonne, slik at innhold som brytes holder innrykket */
+  display: grid;
+  grid-template-columns: 1em minmax(0, 1fr);
+  column-gap: var(--space-small);
+  align-items: baseline;
   padding-block: var(--space-extra-small);
   padding-inline-end: var(--space-small);
   cursor: pointer;
@@ -34,6 +37,14 @@
 }
 .structure-tab__item--selected {
   background: var(--basecolors-frame-highlight);
+}
+.structure-tab__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-extra-small) var(--space-small);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .structure-tab__chevron {
   display: inline-block;
