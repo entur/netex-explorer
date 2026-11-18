@@ -147,4 +147,33 @@ describe('parseXsd', () => {
     const { elements } = parseXsd(wrap('<xsd:element name="N"/>'), 'xsd/a/netex_b_c_version.xsd')
     expect(elements.get('N').source).toBe('xsd/a/netex_b_c_version.xsd')
   })
+  it('collects attribute groups and attributeGroup refs on types', () => {
+    const { attributeGroups, types } = parseXsd(wrap(`
+      <xsd:attributeGroup name="DetailsGroup">
+        <xsd:attribute name="version" type="xsd:string" use="optional"/>
+        <xsd:attributeGroup ref="InnerGroup"/>
+      </xsd:attributeGroup>
+      <xsd:attributeGroup name="InnerGroup"><xsd:attribute name="created" type="xsd:dateTime"/></xsd:attributeGroup>
+      <xsd:complexType name="T">
+        <xsd:complexContent>
+          <xsd:extension base="B"><xsd:attributeGroup ref="DetailsGroup"/></xsd:extension>
+        </xsd:complexContent>
+      </xsd:complexType>
+      <xsd:complexType name="S">
+        <xsd:simpleContent><xsd:extension base="xsd:string"><xsd:attributeGroup ref="InnerGroup"/></xsd:extension></xsd:simpleContent>
+      </xsd:complexType>`))
+    expect(attributeGroups.get('DetailsGroup')).toMatchObject({
+      attributes: [{ name: 'version' }],
+      attributeGroupRefs: ['InnerGroup'],
+    })
+    expect(attributeGroups.get('InnerGroup').attributes[0].name).toBe('created')
+    expect(types.get('T').attributeGroupRefs).toEqual(['DetailsGroup'])
+    expect(types.get('S').attributeGroupRefs).toEqual(['InnerGroup'])
+  })
+
+  it('keeps use="prohibited"', () => {
+    const { types } = parseXsd(wrap(`
+      <xsd:complexType name="T"><xsd:attribute name="a" type="xsd:string" use="prohibited"/></xsd:complexType>`))
+    expect(types.get('T').attributes[0].use).toBe('prohibited')
+  })
 })

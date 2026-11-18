@@ -3,8 +3,8 @@ import { XMLParser } from 'fast-xml-parser'
 /** @typedef {{kind:'element', name:string, ref:boolean, type:string|null, minOccurs:string, maxOccurs:string, description:string}
  *          | {kind:'group', ref:string, minOccurs:string, maxOccurs:string}
  *          | {kind:'sequence'|'choice', minOccurs:string, maxOccurs:string, content:Particle[]}} Particle */
-/** @typedef {{name:string, type:string, use:'required'|'optional', description:string}} AttrDef */
-/** @typedef {{base:string|null, derivation:'extension'|'restriction'|null, content:Particle[], attributes:AttrDef[], abstract:boolean, description:string}} TypeDef */
+/** @typedef {{name:string, type:string, use:'required'|'optional'|'prohibited', description:string}} AttrDef */
+/** @typedef {{base:string|null, derivation:'extension'|'restriction'|null, content:Particle[], attributes:AttrDef[], attributeGroupRefs:string[], abstract:boolean, description:string}} TypeDef */
 
 const TAG_PREFIX = 'xsd:'
 
@@ -30,6 +30,7 @@ export function parseXsd(xsdString, sourcePath = '') {
   const groups = new Map()
   const enums = new Map()
   const listTypes = new Map()
+  const attributeGroups = new Map()
 
   for (const node of childrenOf(schema)) {
     const a = attrsOf(node)
@@ -54,13 +55,21 @@ export function parseXsd(xsdString, sourcePath = '') {
       case 'group':
         groups.set(name, { content: readContent(childrenOf(node)) })
         break
+      case 'attributeGroup': {
+        const kids = childrenOf(node)
+        attributeGroups.set(name, {
+          attributes: kids.filter((c) => tagOf(c) === 'attribute').map(readAttribute),
+          attributeGroupRefs: attributeGroupRefsOf(kids),
+        })
+        break
+      }
       case 'simpleType':
         readSimpleType(node, name, enums, listTypes)
         break
     }
   }
 
-  return { elements, types, groups, enums, listTypes }
+  return { elements, types, groups, enums, listTypes, attributeGroups }
 }
 
 /** @returns {TypeDef} */
@@ -77,9 +86,14 @@ function readComplexType(node) {
     derivation: derivation ? tagOf(derivation) : null,
     content: readContent(body),
     attributes: body.filter((c) => tagOf(c) === 'attribute').map(readAttribute),
+    attributeGroupRefs: attributeGroupRefsOf(body),
     abstract: attrsOf(node).abstract === 'true',
     description: descriptionOf(node),
   }
+}
+
+function attributeGroupRefsOf(nodes) {
+  return nodes.filter((c) => tagOf(c) === 'attributeGroup' && attrsOf(c).ref).map((c) => attrsOf(c).ref)
 }
 
 /** Reads particles; a plain top-level sequence (min/max 1) is flattened. */
@@ -127,7 +141,7 @@ function readAttribute(node) {
   return {
     name: a.name ?? a.ref ?? '',
     type: a.type ?? '',
-    use: a.use === 'required' ? 'required' : 'optional',
+    use: a.use === 'required' || a.use === 'prohibited' ? a.use : 'optional',
     description: descriptionOf(node),
   }
 }
