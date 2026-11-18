@@ -83,7 +83,8 @@ KI-tekst kommer aldri direkte på `main`. Jobben `explain` i `update-data.yml` k
 fra `main` hver natt, men jobben henter først `data/explanations-cache.json` fra den åpne PR-grenen, slik at
 uferdig arbeid og rettelser fortsetter; er det ingen endringer, blir ingen PR åpnet (og en åpen en lukkes). Dataoppdateringen
 (`update`-jobben) committer bare XSD-data og tar aldri med `explanations-*.json`. Feiler `explain`, feiler bare den jobben.
-Jobben kjører bare når repo-variablene `GOOGLE_CLOUD_PROJECT`, `GCP_WIF_PROVIDER` og `GCP_SERVICE_ACCOUNT` er satt.
+Jobben kjører i GitHub-miljøet `prd` som tjenestekontoen fra `.entur/cicd.yaml`, kaller Vertex AI i prosjektet
+`ent-netex-prd`, og kjører bare når repo-variabelen `EXPLAIN_ENABLED` er `true` (av/på-bryter for modellkallene).
 
 ### Gjennomgang av PR-en
 
@@ -98,17 +99,22 @@ oppfølgings-PR). Ikke rediger `public/data/explanations-*.json`; de bygges på 
 
 ### Kjøre lokalt
 
+Krever at du selv har `roles/aiplatform.user` i `ent-netex-prd`. Uten det er det enklere å prøve via CI (se under).
+Forkast filene etterpå (`git checkout -- data public/data`); KI-tekst skal bare inn via PR.
+
 ```bash
 gcloud auth application-default login
-GOOGLE_CLOUD_PROJECT=<prosjekt-id> MAX_REQUESTS=20 npm run explain   # prøvekjøring med 20 kall
+GOOGLE_CLOUD_PROJECT=ent-netex-prd MAX_REQUESTS=20 npm run explain   # prøvekjøring med 20 kall
 ```
 
 | Variabel | Standard | Betydning |
 | --- | --- | --- |
-| `GOOGLE_CLOUD_PROJECT` | (påkrevd) | GCP-prosjektet med Vertex AI |
-| `GOOGLE_CLOUD_LOCATION` | `europe-west1` | Region for Vertex AI |
-| `GEMINI_MODEL` | `gemini-3.5-flash-lite` | Modellen som brukes |
+| `GOOGLE_CLOUD_PROJECT` | (påkrevd lokalt; `ent-netex-prd` i CI) | GCP-prosjektet med Vertex AI |
+| `GOOGLE_CLOUD_LOCATION` | `eu` | Vertex AI-lokasjon (EU-multiregionen) |
+| `GEMINI_MODEL` | `gemini-3.7-flash` | Modellen som brukes; må være godkjent i KI-registeret |
 | `MAX_REQUESTS` | `2000` | Tak på antall kall per kjøring |
+
+I CI kan `GOOGLE_CLOUD_LOCATION` og `GEMINI_MODEL` overstyres med repo-variabler med samme navn.
 
 Første fulle kjøring trenger rundt 2800 kall på tvers av de fire versjonene, altså mer enn standardtaket. Siden
 hurtigbufferen føres videre fra PR-grenen, fortsetter uferdig arbeid neste natt: to netter med standardtaket, eller én
@@ -118,19 +124,25 @@ Etter at du har endret `GEMINI_MODEL` eller `PROMPT_VERSION` (i `scripts/explain
 nytt. Kjør da `workflow_dispatch` med `max_requests=3000`; ellers viser PR-en rundt 30 % av tekstene som fjernet i en
 natt. Standardversjonen (v2.0) forklares først, så et tak fyller det brukerne ser først.
 
-### Oppsett utenfor repoet
+### Oppsett
 
-1. GCP-prosjekt med Vertex AI API aktivert.
-2. Tjenestekonto med rollen `roles/aiplatform.user`.
-3. Workload Identity-pool og provider for GitHub med `attribute-condition`
-   `assertion.repository == 'entur/netex-overview' && assertion.ref == 'refs/heads/main'`. Tjenestekontoen må la
-   identiteten fra poolen bruke den (`roles/iam.workloadIdentityUser`).
-4. Budsjettvarsel på prosjektet.
-5. Repo-variabler (*Settings → Secrets and variables → Actions → Variables*): `GOOGLE_CLOUD_PROJECT`,
-   `GCP_WIF_PROVIDER` (full ressursnavn for provideren) og `GCP_SERVICE_ACCOUNT` (e-post til tjenestekontoen).
-   Valgfritt: `GOOGLE_CLOUD_LOCATION` og `GEMINI_MODEL`.
-6. Slå på *Allow GitHub Actions to create and approve pull requests* under *Settings → Actions → General*.
-7. Registrer bruken i KI-løypa: <https://ki.entur.no/ki-loypa>.
+GCP-prosjekt og GitHub-tilgang lages med Enturs selvbetjening (plattformorkestratoren), som er eneste godkjente vei.
+Mønsteret er det samme som i `entur/ai-registry`.
+
+1. **Selvbetjeningsmanifester** i `.entur/`: `cicd.yaml` (`GitHubActions`, gir GitHub-miljøet `prd` med
+   `WORKLOAD_IDENTITY_PROVIDER` og `SERVICE_ACCOUNT`) og `netex.yaml` (`GoogleCloudApplication`, gir prosjektet
+   `ent-netex-prd` og tilstandsbøtta `ent-gcs-tfa-netex`). Kommenter `entur apply` på PR-en som legger dem til, vent til
+   den er ferdig, og merge.
+2. **Terraform** i `terraform/` aktiverer Vertex AI API og gir prd-miljøets GitHub-tjenestekonto
+   `roles/aiplatform.user`. Sett `github_service_account` i `terraform/env/prd.tfvars` til `SERVICE_ACCOUNT` fra
+   GitHub-miljøet `prd` (*Settings → Environments → prd*). `terraform-apply.yml` kjører ved merge til `main` når
+   `terraform/` er endret; `terraform-plan.yml` kan kjøres manuelt.
+3. **Budsjettvarsel** på `ent-netex-prd`.
+4. Slå på *Allow GitHub Actions to create and approve pull requests* under *Settings → Actions → General*.
+5. **Registrer bruken i KI-løypa**: <https://ki.entur.no/ki-loypa>.
+6. **Prøvekjøring**: sett repo-variabelen `EXPLAIN_ENABLED` til `true` og kjør `update-data.yml` manuelt med
+   `max_requests=20`. Se over språket i PR-en som kommer, lukk den, og kjør så med `max_requests=3000` for første fulle
+   kjøring. Sett `EXPLAIN_ENABLED` til noe annet enn `true` for å slå av modellkallene uten å stoppe dataoppdateringen.
 
 ## NeTEx-versjoner
 

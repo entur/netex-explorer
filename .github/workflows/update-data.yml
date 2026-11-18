@@ -72,13 +72,18 @@ jobs:
 
   # Genererer norske KI-forklaringer og legger dem i en PR (aldri direkte på main).
   # Kjører etter update også når ingen data er endret. Feiler jobben, påvirkes ikke update/deploy.
+  # Kjører i GitHub-miljøet prd som prd-tjenestekontoen fra .entur/cicd.yaml (Workload Identity via
+  # cloud-auth, ingen nøkler). Repo-variabelen EXPLAIN_ENABLED er av/på-bryteren for modellkallene.
+  # Bare betrodd kode fra main: en manuell kjøring mot en annen gren ville kjørt den grenens
+  # arbeidsflyt med skyidentiteten.
   explain:
     needs: update
     concurrency:
       group: ki-forklaringer
       cancel-in-progress: false
-    if: ${{ vars.GOOGLE_CLOUD_PROJECT != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+    if: ${{ vars.EXPLAIN_ENABLED == 'true' && github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
+    environment: prd
     permissions:
       contents: write
       pull-requests: write
@@ -108,17 +113,19 @@ jobs:
             || echo "Ingen åpen ki-forklaringer-branch"
 
       - name: Authenticate to Google Cloud
-        uses: google-github-actions/auth@v2
+        uses: entur/gha-meta/.github/actions/cloud-auth@c14eef7f4d90ed1be2c1df4dfb0927322bcbb3ba   # v1.9.0
         with:
-          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
-          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+          environment: prd
+          gcp_workload_identity_provider: ${{ vars.WORKLOAD_IDENTITY_PROVIDER }}
+          gcp_service_account: ${{ vars.SERVICE_ACCOUNT }}
 
       - name: Generate explanations
         run: npm run explain
         env:
-          GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
-          GOOGLE_CLOUD_LOCATION: ${{ vars.GOOGLE_CLOUD_LOCATION || 'europe-west1' }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          # Prosjektet kommer fra .entur/netex.yaml (metadata.id netex)
+          GOOGLE_CLOUD_PROJECT: ent-netex-prd
+          GOOGLE_CLOUD_LOCATION: ${{ vars.GOOGLE_CLOUD_LOCATION || 'eu' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.7-flash' }}
           MAX_REQUESTS: ${{ inputs.max_requests || '2000' }}
 
       - name: Check explain scripts

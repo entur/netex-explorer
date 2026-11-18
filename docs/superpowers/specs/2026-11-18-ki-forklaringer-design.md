@@ -41,7 +41,7 @@ Beskrivelsene i NeTEx-XSD-ene er korte og tekniske, for eksempel «Reference to 
 
 ## Begrensninger
 
-- Appen er statisk (React + Vite) og publiseres på GitHub Pages fra `entur/netex-overview`.
+- Appen er statisk (React + Vite) og publiseres på GitHub Pages fra `entur/netex-explorer`.
 - Data lages av `npm run fetch-schema` i `update-data.yml` hver natt og committes til `public/data/`.
 - Enturs KI-register godkjenner Gemini via Vertex AI fra Enturs egne GCP-prosjekter, også fra GitHub Actions, for åpne og
   interne data. NeTEx-skjemaet er offentlig. Direkte Claude API er ikke registrert.
@@ -92,11 +92,12 @@ uten oversettelse. Ren tekst, ingen markdown.
 
 - `@google/genai` (devDependency) med `vertexai: true`, prosjekt og region fra miljøvariabler (`GOOGLE_CLOUD_PROJECT`,
   `GOOGLE_CLOUD_LOCATION`), innlogging via Application Default Credentials.
-- Modell fra `GEMINI_MODEL`. Standard er `gemini-3.5-flash-lite`, den nyeste av modellene KI-registeret godkjenner for Vertex AI
-  (registeret per 2026-11-17: `gemini-2.5-flash`, `gemini-2.5-pro`, `gemini-3.5-flash-lite`; 2.5-modellene kan være på vei ut).
-  Region fra `GOOGLE_CLOUD_LOCATION`, standard `europe-west1`. Begge bekreftes i prøvekjøringen før full kjøring
+- Modell fra `GEMINI_MODEL`. Standard er `gemini-3.7-flash`, godkjent i KI-registeret for Vertex AI og samme modell som
+  `entur/ai-registry` bruker. Lokasjon fra `GOOGLE_CLOUD_LOCATION`, standard `eu` (EU-multiregionen, Enturs valg i
+  `entur/ai-registry`). Begge bekreftes i prøvekjøringen før full kjøring
   *(byggerens valg)*. Temperatur lav (0.2).
-- Lokalt: `gcloud auth application-default login`. I CI: `google-github-actions/auth` med Workload Identity Federation.
+- Lokalt: `gcloud auth application-default login`. I CI: GitHub-miljøet `prd` og `entur/gha-meta`-handlingen `cloud-auth`
+  (Workload Identity Federation satt opp av Enturs selvbetjening).
 
 ### Hurtigbuffer og filer
 
@@ -109,7 +110,7 @@ uten oversettelse. Ren tekst, ingen markdown.
   ```json
   {
     "version": "v2.0",
-    "model": "gemini-3.5-flash-lite",
+    "model": "gemini-3.7-flash",
     "generatedAt": "…",
     "types":  { "Line": "…" },
     "fields": { "Line.TransportMode": "…" },
@@ -139,9 +140,9 @@ inn slik at testene kan bruke en falsk klient.
 `update-data.yml` committer XSD-data til `main` som i dag. En ny jobb `explain` kjører etter `update` (også når ingen data
 ble endret, så forklaringer som manglet eller ikke rakk å bli laget, tas igjen):
 
-- Kjøres bare når repo-variablene `GCP_WIF_PROVIDER`, `GCP_SERVICE_ACCOUNT` og `GOOGLE_CLOUD_PROJECT` er satt.
-  Rettigheter: `contents: write`, `pull-requests: write`, `id-token: write`.
-- Sjekker ut `main`, logger inn med `google-github-actions/auth`, kjører `npm run explain`.
+- Kjøres bare når repo-variabelen `EXPLAIN_ENABLED` er `true` (av/på-bryter for modellkallene) og bare fra `main`.
+  Kjører i GitHub-miljøet `prd`. Rettigheter: `contents: write`, `pull-requests: write`, `id-token: write`.
+- Sjekker ut `main`, logger inn med `cloud-auth` som prd-tjenestekontoen, kjører `npm run explain` mot `ent-netex-prd`.
 - Endringer i `data/explanations-cache.json` og `public/data/explanations-*.json` legges i en PR fra den faste branchen
   `ki-forklaringer` mot `main` (`peter-evans/create-pull-request`). Branchen lages på nytt fra `main` hver natt, så PR-en
   oppdateres i stedet for at det blir flere, og den får aldri konflikter. Ingen endringer → ingen PR (en åpen PR lukkes).
@@ -151,10 +152,14 @@ ble endret, så forklaringer som manglet eller ikke rakk å bli laget, tas igjen
 - Feiler genereringen, feiler bare `explain`-jobben; XSD-data er allerede committet og publisert.
 - Første fulle kjøring startes med `workflow_dispatch`.
 
-Utenfor dette repoet (README beskriver hva som trengs):
+GCP-oppsett (samme mønster som `entur/ai-registry`; README beskriver stegene):
 
-- GCP: prosjekt, Vertex AI API, tjenestekonto med `roles/aiplatform.user`, Workload Identity-pool med `attribute-condition` som
-  bare slipper inn `entur/netex-overview` på `refs/heads/main`, og budsjettvarsel.
+- Enturs selvbetjening (eneste godkjente vei): `.entur/cicd.yaml` (`GitHubActions`, miljø `prd`) og `.entur/netex.yaml`
+  (`GoogleCloudApplication`, id `netex`, eier `team-produkt`, bare `prd`, uten Kubernetes). Gir prosjektet `ent-netex-prd`,
+  tilstandsbøtta `ent-gcs-tfa-netex` og GitHub-miljøet `prd` med Workload Identity. Lagt til i en egen PR som apply-es først.
+- `terraform/` aktiverer `aiplatform.googleapis.com` og gir prd-miljøets GitHub-tjenestekonto `roles/aiplatform.user`.
+  `terraform-apply.yml` kjører ved merge til `main`; `terraform-plan.yml` kjøres manuelt.
+- Budsjettvarsel på prosjektet.
 - Repo-innstilling: «Allow GitHub Actions to create and approve pull requests» må være på.
 - Registrering av bruken i KI-løypa (<https://ki.entur.no/ki-loypa>).
 

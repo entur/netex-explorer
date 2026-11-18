@@ -11,8 +11,8 @@ const DATA_DIR = join(__dirname, '../public/data')
 const CACHE_PATH = join(__dirname, '../data/explanations-cache.json')
 const SUMMARY_PATH = join(__dirname, '../explain-summary.md')
 
-const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite'
-const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'europe-west1'
+const MODEL = process.env.GEMINI_MODEL || 'gemini-3.7-flash'
+const LOCATION = process.env.GOOGLE_CLOUD_LOCATION || 'eu'
 const PROJECT = process.env.GOOGLE_CLOUD_PROJECT
 const SAVE_EVERY = 25
 

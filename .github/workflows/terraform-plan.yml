@@ -1,0 +1,21 @@
+name: terraform-plan
+
+# Planlegger terraform/ mot prd med Enturs gjenbrukbare arbeidsflyt. Kjøres bare manuelt: en plan
+# på pull_request ville utført PR-grenens Terraform-kode med CI-tjenestekontoens skyidentitet
+# (id-token: write). Kjør den fra Actions-fanen når en Terraform-endring skal vurderes; apply
+# skjer ved fletting til main (terraform-apply.yml). Mønster: entur/ai-registry.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  plan-prd:
+    name: Plan (prd)
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: entur/gha-terraform/.github/workflows/plan.yml@67c83c025c1810b54a77624ca6090a46dcac9c94   # v3.0.0
+    with:
+      environment: prd
+      directory: terraform
