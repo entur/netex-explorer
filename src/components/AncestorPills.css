@@ -1,8 +1,30 @@
 .ancestor-pills {
   display: flex;
+  flex-direction: column;
+  gap: var(--space-extra-small);
+}
+.ancestor-pills__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--basecolors-text-subdued);
+}
+.ancestor-pills__list {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-extra-small);
+  row-gap: var(--space-extra-small);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.ancestor-pills__item {
+  display: flex;
+  align-items: center;
+}
+.ancestor-pills__item + .ancestor-pills__item::before {
+  content: '→' / '';
+  padding: 0 var(--space-extra-small);
+  color: var(--basecolors-text-subdued);
 }
 .ancestor-pills__pill {
   font: inherit;
@@ -16,19 +38,27 @@
 .ancestor-pills__pill--abstract {
   color: var(--basecolors-text-subdued);
   font-style: italic;
+  border-style: dashed;
 }
 .ancestor-pills__pill--active {
   background: var(--basecolors-frame-contrast);
   border-color: var(--basecolors-frame-contrast);
+  border-style: solid;
   color: var(--basecolors-text-light);
 }
 .ancestor-pills__pill--self {
   font-weight: bold;
   cursor: default;
-  border-color: var(--basecolors-stroke-default);
+  border-width: 2px;
+}
+.ancestor-pills__hint {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--basecolors-text-subdued);
 }
 .ancestor-pills__clear {
   font: inherit;
+  padding: 0;
   background: none;
   border: none;
   color: inherit;
