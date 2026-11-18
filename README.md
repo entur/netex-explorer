@@ -1,114 +1,80 @@
 # NeTEx-utforsker
 
-En interaktiv applikasjon for å utforske NeTEx-standarden (Network Timetable Exchange).
+Interaktiv utforsker for NeTEx-standarden (Network Timetable Exchange), bygget med Entur sitt designsystem Linje.
 
 ## Funksjoner
 
-- 📊 Utforsk NeTEx-elementene organisert i 3 deler (Nettverk, Rutetabeller, Billetter)
-- 🔍 Søk etter elementer og attributter
-- 🌍 Se nasjonale profiler (Nordisk, Britisk, Fransk)
-- 📚 Vis eksempeldata og validering
-- 🔢 Utforsk enumerasjoner med gyldige verdier
-- 🔄 Velg mellom ulike NeTEx-versjoner (v1.3, v2.0, v2.1-wip, v3.0-wip)
+- Elementer gruppert etter del og modul, med søk i elementer og felter (også arvede)
+- Elementside med felttabell, arvekjede (filtrer på opphav), strukturvisning som XML-tre og XML-instans fra lastet fil
+- Enum-sider med verdier og oversikt over hvilke felter som bruker enumen
+- Bytte mellom NeTEx-versjoner (v1.3, v2.0, v2.1-wip, v3.0-wip); versjon, element, enum og fane ligger i URL-en
+- Last inn NeTEx-eksempler, lokal XML-fil eller limt inn XML og se verdiene til instanser
 
 ## Kom i gang
 
-### Installasjon
-
 ```bash
 npm install
-```
-
-### Hent NeTEx-schema
-
-Før du kan bruke appen, må du hente NeTEx-schema fra GitHub:
-
-```bash
-# Hent standard versjon (v2.0)
-npm run fetch-schema
-
-# Eller hent en spesifikk versjon
-npm run fetch-schema:v1.3   # NeTEx v1.3
-npm run fetch-schema:v2.0   # NeTEx v2.0 (stabil)
-npm run fetch-schema:v2.1   # NeTEx v2.1 (arbeidskopi)
-npm run fetch-schema:v3.0   # NeTEx v3.0 (arbeidskopi)
-```
-
-### Kjør appen
-
-```bash
-# Utviklingsmodus
+npm run fetch-schema        # henter og parser alle versjoner
 npm run dev
+```
 
-# Bygg for produksjon
-npm run build
+### Hente data
 
-# Forhåndsvis produksjonsbygg
+`npm run fetch-schema` henter XSD-ene fra [NeTEx-repoet på GitHub](https://github.com/NeTEx-CEN/NeTEx), parser dem og skriver
+`public/data/netex-<versjon>.json` og `public/data/versions.json`. Appen laster disse filene ved kjøring.
+
+Gi versjoner som argument for å hente bare noen:
+
+```bash
+npm run fetch-schema -- v2.0
+npm run fetch-schema -- v2.0 v1.3
+```
+
+### Bygg og forhåndsvis
+
+```bash
+npm run build      # tsc -b og vite build
 npm run preview
 ```
 
+#### `BASE_PATH`
+
+Appen kan ligge under en understi. Sett `BASE_PATH` ved bygging (Vite `base`); uten verdi brukes `/`.
+All lenking og datahenting går via `import.meta.env.BASE_URL`.
+
+```bash
+BASE_PATH=/netex-overview/ npm run build
+```
+
+#### Uniformen
+
+Ved bygging (og ved `npm run dev`) hentes Entur sitt felles skall fra Uniformen
+(`https://uniformen.entur.no/ssr?simple=true&locale=nb-NO`, tidsavbrudd 2000 ms) og settes inn i `index.html`.
+Feiler kallet, bygges appen uten skall.
+
+### Skrifter
+
+Skriften Nationale kommer fra `@entur/typography`, som leverer `@font-face` og skriftfilene, og de blir med i bygget.
+Arial brukes bare som reserve. Nationale er lisensiert for offisielle Entur-produkter, som appen skal være når den flyttes til
+Entur-organisasjonen.
+
 ## NeTEx-versjoner
 
-Appen støtter dynamisk bytte mellom flere NeTEx-versjoner:
-
-- **v1.3**: Eldre stabil versjon
-- **v2.0**: Nåværende stabil versjon (anbefalt)
-- **v2.1-wip**: Arbeidskopi - neste versjon under utvikling
-- **v3.0-wip**: Arbeidskopi - fremtidig hovedversjon
-
-### Slik bytter du versjon
-
-1. Velg ønsket versjon i nedtrekksmenyen øverst i appen (med branch-ikonet 🌿)
-2. Appen laster automatisk den valgte versjonen uten at du trenger å bygge på nytt
-3. Alle elementer, attributter, **enumerasjoner** og eksempler oppdateres til den valgte versjonen
-
-**Eksempel:** Når du bytter fra v2.0 til v2.1-wip:
-- Nye element-typer vises
-- Nye verdier i enums (f.eks. `PaymentMethodEnumeration`) blir tilgjengelige
-- Oppdaterte attributter og beskrivelser lastes inn
-
-Versjoner hentes dynamisk fra GitHub når du kjører `npm run fetch-schema`, så appen vil alltid ha de nyeste versjonene tilgjengelig.
-
-## NeTEx Framework
-
-Appen henter nå data fra alle undermapper i `netex_framework`:
-
-- `netex_frames` - Rammestrukturer
-- `netex_genericFramework` - Generisk rammeverk
-- `netex_responsibility` - Ansvarsområder
-- `netex_reusableComponents` - Gjenbrukbare komponenter
-- `netex_utility` - Hjelpefunksjoner
-
-## Nasjonale profiler
-
-Appen støtter visning av nasjonale NeTEx-profiler:
-
-- 🇳🇴 **Nordisk profil** - Felles profil for Norge, Sverige, Danmark
-- 🇬🇧 **Britisk profil** - UK Bus Open Data Service
-- 🇫🇷 **Fransk profil** - Profil France
+Versjonslisten kommer fra `public/data/versions.json`. Versjoner som feilet under henting vises ikke i velgeren.
+Profiler (nasjonale tilpasninger) støttes ikke; appen viser bare selve NeTEx-standarden.
 
 ## Testing
 
 ```bash
-# Kjør tester
-npm test
-
-# Kjør tester med UI
-npm run test:ui
+npm test            # Vitest (watch)
+npx vitest run      # én kjøring
+npm run lint
 ```
 
 ## Teknologier
 
-- **React 19** - UI-bibliotek
-- **TypeScript** - Type-sikkerhet
-- **Vite** - Byggsystem
-- **Entur Design System** - UI-komponenter
-- **fast-xml-parser** - XML-parsing
-- **Vitest** - Testing
+React 19, TypeScript (strict), Vite, Entur Linje (`@entur/*`), fast-xml-parser, Vitest og Testing Library.
 
 ## Bidra
 
-Se [docs/superpowers/](docs/superpowers/) for planlegging og design-dokumenter.
-
-
-
+Se [docs/superpowers/](docs/superpowers/) for planer og design-dokumenter.

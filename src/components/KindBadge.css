@@ -1,0 +1,20 @@
+@import '@entur/tokens/dist/data.css';
+
+.kind-badge {
+  --kind-color: var(--basecolors-text-subdued);
+  display: inline-block;
+  padding: 0 var(--space-extra-small);
+  border: 1px solid var(--kind-color);
+  border-radius: var(--space-extra-small);
+  color: inherit;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+.kind-badge--enum { --kind-color: var(--standard-coral); }
+.kind-badge--ref { --kind-color: var(--standard-jungle); }
+.kind-badge--list { --kind-color: var(--standard-azure); }
+.kind-badge--complex { --kind-color: var(--standard-lilac); }
+.kind-badge__attr {
+  font-weight: bold;
+  margin-inline-end: 0.125em;
+}

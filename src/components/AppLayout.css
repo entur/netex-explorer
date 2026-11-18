@@ -1,0 +1,56 @@
+/* Smal tittellinje rett under Uniformen-headeren (ikke h1: elementsiden eier overskriften) */
+.app-layout__titlebar {
+  padding: var(--space-extra-small) var(--space-medium);
+  border-bottom: 1px solid var(--basecolors-frame-subdued);
+  background: var(--basecolors-frame-default);
+}
+.app-layout__title {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.app-layout__title:hover {
+  text-decoration: underline;
+}
+.app-layout__title:focus-visible {
+  outline: 2px solid var(--basecolors-stroke-focus);
+  outline-offset: 2px;
+}
+
+.app-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);
+  min-height: 100vh;
+}
+
+.app-layout__sidebar {
+  border-right: 1px solid var(--basecolors-frame-subdued);
+  background: var(--basecolors-frame-elevated);
+  padding: var(--space-medium);
+  overflow: auto;
+  min-width: 0;
+}
+
+.app-layout__content {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.app-layout__toolbar {
+  padding: var(--space-small) var(--space-medium);
+  border-bottom: 1px solid var(--basecolors-frame-subdued);
+}
+
+.app-layout__main {
+  flex: 1;
+  padding: var(--space-medium);
+  min-width: 0;
+}
+
+/* 50rem = Linjes «large»-brekkpunkt (--breakpoints-* kan ikke brukes i media queries) */
+@media (max-width: 49.99rem) {
+  .app-layout {
+    grid-template-columns: 1fr;
+  }
+}

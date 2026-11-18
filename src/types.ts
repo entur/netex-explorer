@@ -1,53 +1,5 @@
-/** Top-level grouping categories for NeTEx elements */
-export type ElementGroup =
-  // Part 1 — Network & Stops
-  | 'AccessSpace'
-  | 'Connection'
-  | 'FareZone'
-  | 'FlexibleLine'
-  | 'Line'
-  | 'NavigationPath'
-  | 'Network'
-  | 'Parking'
-  | 'PathLink'
-  | 'Quay'
-  | 'Route'
-  | 'ScheduledStopPoint'
-  | 'ServiceLink'
-  | 'SiteFrame'
-  | 'StopArea'
-  | 'StopPlace'
-  // Part 2 — Timetables
-  | 'Block'
-  | 'DeadRun'
-  | 'Interchange'
-  | 'ServiceJourney'
-  | 'TimetabledPassingTime'
-  | 'TrainNumber'
-  | 'VehicleJourney'
-  | 'VehicleService'
-  // Part 3 — Fares
-  | 'DistanceMatrixElement'
-  | 'DistributionChannel'
-  | 'FarePrice'
-  | 'FareProduct'
-  | 'FareStructureElement'
-  | 'FareTable'
-  | 'FulfilmentMethod'
-  | 'PricingRule'
-  | 'QualityStructureFactor'
-  | 'SalesOfferPackage'
-  | 'Tariff'
-  | 'TimeStructureFactor'
-  | 'TypeOfTravelDocument'
-  | 'UsageParameter'
-  | 'ValidableElement'
-  // All parts
-  | 'Other'
-  // Virtual group for enumerations
-  | 'Enumerations'
-
-export type AttributeKind =
+/** Datamodell skrevet av XSD-parseren til public/data/netex-<versjon>.json */
+export type FieldKind =
   | 'enum'
   | 'ref'
   | 'list'
@@ -56,30 +8,73 @@ export type AttributeKind =
   | 'boolean'
   | 'integer'
   | 'decimal'
+  /** Typen er ikke xsd:* og finnes ikke i XSD-filene som er lest inn (f.eks. gml:) */
+  | 'unknown'
 
-export interface NeTExAttribute {
-  name: string
-  type: string
-  kind: AttributeKind
+export interface Choice {
+  id: string
   minOccurs: string
   maxOccurs: string
+}
+
+export interface ContainedElement {
+  name: string
+  minOccurs: string
+  maxOccurs: string
+  /** true: `<xsd:element ref="name">` (globalt element); false: lokal deklarasjon med egen `type` */
+  ref: boolean
+  /** Deklarert type for lokale elementer (nøkkel i `structures` hvis den er en complexType) */
+  type?: string
+}
+
+export interface Field {
+  name: string
+  type: string
+  kind: FieldKind
+  isAttribute: boolean
+  isList: boolean
+  minOccurs: string
+  maxOccurs: string
+  required: boolean
+  choice?: Choice
+  /** Elementet (eller typen) feltet er definert på */
+  origin: string
   description: string
+  contains?: ContainedElement[]
+  /**
+   * Elementet feltet peker på: for `kind: 'ref'` det som refereres (kan være abstrakt og mangle i `elements`);
+   * for `<xsd:element ref="X">` ellers X når X er et konkret element; X når X er et abstrakt hode (nøkkel i `substitutions`).
+   */
+  refTarget?: string
+  /** Navn i `VersionData.structures` */
+  structure?: string
 }
 
-export interface NeTExInheritedAttribute extends NeTExAttribute {
-  inheritedFrom: string
-}
-
-export interface NeTExElement {
+export interface Ancestor {
   name: string
   abstract: boolean
-  parent: string | null
-  group: ElementGroup
+}
+
+export interface Element {
+  name: string
+  abstract: boolean
   part: 0 | 1 | 2 | 3
+  /** Rå modulnavn, f.eks. 'stopPlace' (leselig etikett lages i navigation.ts) */
+  module: string
   description: string
-  inheritedFrom: string[]       // ordered closest-first, e.g. ["FareProduct", "PriceableObject", "DataManagedObject"]
-  attributes: NeTExAttribute[]
-  inheritedAttributes: NeTExInheritedAttribute[]
+  ancestors: Ancestor[]
+  fields: Field[]
+}
+
+export interface EnumValue {
+  value: string
+  description: string
+}
+
+export interface EnumType {
+  name: string
+  description: string
+  values: EnumValue[]
 }
 
 export interface NeTExExample {
@@ -91,7 +86,7 @@ export interface NeTExExample {
 export interface ParsedInstanceAttribute {
   name: string
   value: string
-  kind: AttributeKind
+  kind: FieldKind
 }
 
 export interface ParsedInstance {
@@ -109,64 +104,24 @@ export interface LoadedFile {
   instanceMap: InstanceMap
 }
 
-// --- Profile annotation types ---
+// --- Versjonshåndtering ---
 
-export type ProfileStatus = 'required' | 'optional' | 'not-in-profile'
-
-export interface ProfileElementData {
-  status: ProfileStatus
-  attributes: Record<string, ProfileStatus>
-}
-
-/** Keyed by NeTEx element name, e.g. "PreassignedFareProduct" */
-export type ProfileData = Record<string, ProfileElementData>
-
-export type ActiveProfile = 'fr' | 'nordic' | 'uk' | null
-
-// --- Profile structure guide types ---
-
-export type StructureNodeType = 'container' | 'collection' | 'element'
-
-export interface StructureNode {
-  id: string
-  type: StructureNodeType
-  label: string
-  description: string
-  xmlSnippet: string
-  elementRef?: string        // only for type === 'element'; matches NeTExElement.name
-  children: StructureNode[]
-}
-
-export interface ProfileStructure {
-  profile: string
-  label: string
-  root: StructureNode
-}
-
-/** Maps enum type name to array of allowed values */
-export type NeTExEnums = Record<string, string[]>
-
-// --- Version management types ---
+export type VersionManifestEntry =
+  | { version: string; file: string; elementCount: number; enumCount: number; fetchedAt: string }
+  | { version: string; error: string }
 
 export interface VersionManifest {
-  versions: VersionInfo[]
   generatedAt: string
-}
-
-export interface VersionInfo {
-  version: string
-  file?: string
-  elementCount?: number
-  enumCount?: number
-  exampleCount?: number
-  fetchedAt: string
-  error?: string
+  versions: VersionManifestEntry[]
 }
 
 export interface VersionData {
   version: string
-  elements: NeTExElement[]
-  enums: NeTExEnums
-  examples: NeTExExample[]
   fetchedAt: string
+  elements: Element[]
+  enums: Record<string, EnumType>
+  structures: Record<string, Field[]>
+  /** Abstrakt element (substitusjonsgruppe-hode) → konkrete elementer som kan stå i stedet, sortert */
+  substitutions: Record<string, string[]>
+  examples: NeTExExample[]
 }

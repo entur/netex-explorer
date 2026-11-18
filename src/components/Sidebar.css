@@ -1,0 +1,42 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-medium);
+}
+
+.sidebar__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.sidebar__empty {
+  margin: 0;
+  color: var(--basecolors-text-subdued);
+}
+
+.sidebar__toggle {
+  display: none;
+  font: inherit;
+  padding: var(--space-small) var(--space-medium);
+  border: 1px solid var(--basecolors-stroke-default);
+  border-radius: var(--space-extra-small);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: start;
+}
+.sidebar__toggle:focus-visible {
+  outline: 2px solid var(--basecolors-stroke-focus);
+  outline-offset: 2px;
+}
+
+/* 50rem = Linjes «large»-brekkpunkt (--breakpoints-* kan ikke brukes i media queries) */
+@media (max-width: 49.99rem) {
+  .sidebar__toggle {
+    display: block;
+  }
+  .sidebar__listwrap--collapsed {
+    display: none;
+  }
+}

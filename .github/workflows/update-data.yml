@@ -32,16 +32,15 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fetch profile data
-        run: npm run fetch-profiles
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # Parser tests and invariants for the generated data; a failure stops the commit
+      - name: Check generated data
+        run: npx vitest run scripts
 
       - name: Commit updated data files
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add src/data/netex-elements.json src/data/netex-examples.json src/data/profiles/fr.json src/data/profiles/nordic.json
+          git add public/data
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else

@@ -1,0 +1,23 @@
+.enum-values {
+  margin: 0;
+  padding: var(--space-small);
+}
+.enum-values__item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-extra-small) var(--space-medium);
+}
+.enum-values__value {
+  font-family: monospace;
+  min-width: min(12rem, 100%);
+  overflow-wrap: anywhere;
+}
+.enum-values__description {
+  margin: 0;
+  color: var(--basecolors-text-subdued);
+}
+.enum-values__empty {
+  margin: 0;
+  padding: var(--space-small);
+  color: var(--basecolors-text-subdued);
+}

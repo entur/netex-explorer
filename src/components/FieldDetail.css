@@ -1,0 +1,41 @@
+.field-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-small);
+  padding: var(--space-medium);
+  border: 1px solid var(--basecolors-stroke-default);
+  border-radius: var(--space-extra-small);
+  background: var(--basecolors-frame-elevated);
+}
+.field-detail__name {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+.field-detail__facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: var(--space-extra-small) var(--space-medium);
+  margin: 0;
+}
+.field-detail__facts dt {
+  color: var(--basecolors-text-subdued);
+}
+.field-detail__facts dd {
+  margin: 0;
+}
+.field-detail__description {
+  margin: 0;
+}
+.field-detail__link {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.field-detail__unknown {
+  margin: var(--space-extra-small) 0 0;
+  color: var(--basecolors-text-subdued);
+}

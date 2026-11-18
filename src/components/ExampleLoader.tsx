@@ -1,9 +1,11 @@
 import { useState, useRef } from 'react'
-import { TertiaryButton, PrimaryButton } from '@entur/button'
+import { SecondaryButton, PrimaryButton } from '@entur/button'
 import { Modal } from '@entur/modal'
+import { OverflowMenu, OverflowMenuItem } from '@entur/menu'
 import { TextArea } from '@entur/form'
 import type { NeTExExample, LoadedFile } from '../types'
 import { parseXmlInstance } from '../utils/xml-instance-parser'
+import './ExampleLoader.css'
 
 interface ExampleLoaderProps {
   examples: NeTExExample[]
@@ -11,15 +13,13 @@ interface ExampleLoaderProps {
 }
 
 export function ExampleLoader({ examples, onFileLoaded }: ExampleLoaderProps) {
-  const [open, setOpen] = useState(false)
   const [pasteOpen, setPasteOpen] = useState(false)
   const [pasteXml, setPasteXml] = useState('')
   const [activeFilename, setActiveFilename] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
 
   function loadXml(xml: string, filename: string) {
-    const instanceMap = parseXmlInstance(xml)
-    onFileLoaded({ filename, instanceMap })
+    onFileLoaded({ filename, instanceMap: parseXmlInstance(xml) })
     setActiveFilename(filename)
   }
 
@@ -29,15 +29,16 @@ export function ExampleLoader({ examples, onFileLoaded }: ExampleLoaderProps) {
     const reader = new FileReader()
     reader.onload = (ev) => loadXml(ev.target!.result as string, file.name)
     reader.readAsText(file)
-    setOpen(false)
+  }
+
+  function closePaste() {
+    setPasteOpen(false)
+    setPasteXml('')
   }
 
   function handlePaste() {
-    if (pasteXml.trim()) {
-      loadXml(pasteXml.trim(), 'clipboard.xml')
-    }
-    setPasteOpen(false)
-    setPasteXml('')
+    if (pasteXml.trim()) loadXml(pasteXml.trim(), 'clipboard.xml')
+    closePaste()
   }
 
   function clearFile() {
@@ -46,152 +47,48 @@ export function ExampleLoader({ examples, onFileLoaded }: ExampleLoaderProps) {
   }
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', position: 'relative' }}>
+    <div className="example-loader">
       {activeFilename ? (
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '6px',
-          fontSize: '11px',
-          padding: '3px 8px',
-          background: 'var(--colors-greys-grey90, #f8f8f8)',
-          border: '1px solid var(--colors-greys-grey80, #e0e0e0)',
-          borderRadius: '4px',
-          color: 'var(--colors-greys-grey10, #2a2a2a)',
-        }}>
-          <span style={{ maxWidth: '180px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {activeFilename}
-          </span>
-          <TertiaryButton onClick={clearFile}>✕</TertiaryButton>
+        <div className="example-loader__active">
+          <span className="example-loader__filename">{activeFilename}</span>
+          <SecondaryButton size="small" onClick={clearFile} aria-label={`Fjern ${activeFilename}`}>
+            ✕
+          </SecondaryButton>
         </div>
       ) : (
-        <span style={{ fontSize: '11px', color: 'var(--colors-greys-grey50, #888)', fontStyle: 'italic', whiteSpace: 'nowrap' }}>
-          Analyser NeTEx-filer
-        </span>
+        <span className="example-loader__hint">Analyser NeTEx-filer</span>
       )}
 
-      <div style={{ position: 'relative' }}>
-        <button
-          type="button"
-          onClick={() => setOpen((v) => !v)}
-          style={{
-            fontSize: '11px',
-            padding: '4px 10px',
-            borderRadius: '4px',
-            border: '1px solid var(--colors-greys-grey80, #e0e0e0)',
-            background: 'var(--colors-greys-white, #ffffff)',
-            color: 'var(--colors-greys-grey40, #555)',
-            cursor: 'pointer',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          Last inn {open ? '▲' : '▼'}
-        </button>
-
-        {open && (
-          <div style={{
-            position: 'absolute',
-            right: 0,
-            top: '100%',
-            marginTop: '4px',
-            width: '320px',
-            background: 'var(--colors-greys-white, #ffffff)',
-            border: '1px solid var(--colors-greys-grey80, #e0e0e0)',
-            borderRadius: '8px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.12)',
-            zIndex: 50,
-            overflow: 'hidden',
-          }}>
-            <div style={{
-              padding: '8px 12px',
-              fontSize: '11px',
-              color: 'var(--colors-greys-grey50, #888)',
-              borderBottom: '1px solid var(--colors-greys-grey80, #e0e0e0)',
-            }}>
-              Offisielle NeTEx-eksempler
-            </div>
-            <div style={{ maxHeight: '256px', overflowY: 'auto' }}>
-              {examples.map((ex) => (
-                <button
-                  type="button"
-                  key={ex.filename}
-                  onClick={() => { loadXml(ex.xml, ex.filename); setOpen(false) }}
-                  style={{
-                    width: '100%',
-                    textAlign: 'left',
-                    padding: '8px 12px',
-                    fontSize: '12px',
-                    color: 'var(--colors-greys-grey10, #2a2a2a)',
-                    background: 'none',
-                    border: 'none',
-                    cursor: 'pointer',
-                  }}
-                >
-                  {ex.label}
-                </button>
-              ))}
-            </div>
-            <div style={{ borderTop: '1px solid var(--colors-greys-grey80, #e0e0e0)' }}>
-              <button
-                type="button"
-                onClick={() => { fileRef.current?.click(); setOpen(false) }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  fontSize: '12px',
-                  color: 'var(--colors-greys-grey40, #555)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Last inn lokal XML-fil...
-              </button>
-              <button
-                type="button"
-                onClick={() => { setPasteOpen(true); setOpen(false) }}
-                style={{
-                  width: '100%',
-                  textAlign: 'left',
-                  padding: '8px 12px',
-                  fontSize: '12px',
-                  color: 'var(--colors-greys-grey40, #555)',
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                }}
-              >
-                Lim inn XML...
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
-      <input ref={fileRef} type="file" accept=".xml" style={{ display: 'none' }} onChange={handleFileChange} />
-
-      <Modal
-        open={pasteOpen}
-        onDismiss={() => { setPasteOpen(false); setPasteXml('') }}
-        title="Lim inn NeTEx XML"
-        size="medium"
+      <OverflowMenu
+        aria-label="Last inn NeTEx-eksempel"
+        button={<SecondaryButton size="small">Last inn</SecondaryButton>}
+        placement="bottom-end"
       >
+        {examples.map((ex) => (
+          <OverflowMenuItem key={ex.filename} onSelect={() => loadXml(ex.xml, ex.filename)}>
+            {ex.label}
+          </OverflowMenuItem>
+        ))}
+        <OverflowMenuItem onSelect={() => fileRef.current?.click()}>Last inn lokal XML-fil…</OverflowMenuItem>
+        <OverflowMenuItem onSelect={() => setPasteOpen(true)}>Lim inn XML…</OverflowMenuItem>
+      </OverflowMenu>
+
+      <input ref={fileRef} type="file" accept=".xml" hidden onChange={handleFileChange} />
+
+      <Modal open={pasteOpen} onDismiss={closePaste} title="Lim inn NeTEx XML" size="medium">
         <TextArea
+          className="example-loader__textarea"
           label="NeTEx XML"
           value={pasteXml}
           onChange={(e) => setPasteXml(e.target.value)}
           resize="none"
-          style={{ width: '100%', height: '256px', fontFamily: 'monospace', fontSize: '12px' }}
           placeholder="<PublicationDelivery ...>...</PublicationDelivery>"
         />
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px', marginTop: '12px' }}>
-          <TertiaryButton onClick={() => { setPasteOpen(false); setPasteXml('') }}>
+        <div className="example-loader__actions">
+          <SecondaryButton size="small" onClick={closePaste}>
             Avbryt
-          </TertiaryButton>
-          <PrimaryButton onClick={handlePaste}>
-            Last inn
-          </PrimaryButton>
+          </SecondaryButton>
+          <PrimaryButton onClick={handlePaste}>Last inn</PrimaryButton>
         </div>
       </Modal>
     </div>

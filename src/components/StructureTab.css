@@ -1,0 +1,78 @@
+.structure-tab {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-medium);
+  align-items: start;
+}
+/* 50rem = Linjes «large»-brekkpunkt (--breakpoints-* kan ikke brukes i media queries) */
+@media (min-width: 50rem) {
+  .structure-tab {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  }
+  .structure-tab__detail {
+    position: sticky;
+    top: var(--space-medium);
+  }
+}
+.structure-tab__tree {
+  min-width: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.structure-tab__item {
+  /* chevron i egen kolonne, slik at innhold som brytes holder innrykket */
+  display: grid;
+  grid-template-columns: 1em minmax(0, 1fr);
+  column-gap: var(--space-small);
+  align-items: baseline;
+  padding-block: var(--space-extra-small);
+  padding-inline-end: var(--space-small);
+  cursor: pointer;
+}
+.structure-tab__item:focus-visible {
+  outline: 2px solid var(--basecolors-stroke-focus);
+  outline-offset: -2px;
+}
+.structure-tab__item--selected {
+  background: var(--basecolors-frame-highlight);
+}
+.structure-tab__content {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-extra-small) var(--space-small);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.structure-tab__chevron {
+  display: inline-block;
+  width: 1em;
+  color: var(--basecolors-text-subdued);
+}
+.structure-tab__name {
+  font-weight: bold;
+}
+.structure-tab__meta {
+  color: var(--basecolors-text-subdued);
+}
+.structure-tab__divider {
+  padding-block: var(--space-small) var(--space-extra-small);
+  color: var(--basecolors-text-subdued);
+  font-size: 0.875em;
+  text-transform: none;
+  border-block-start: 1px solid var(--basecolors-stroke-default);
+}
+.structure-tab__link {
+  font: inherit;
+  padding: 0;
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.structure-tab__hint {
+  color: var(--basecolors-text-subdued);
+}

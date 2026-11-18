@@ -1,0 +1,37 @@
+.ancestor-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-extra-small);
+}
+.ancestor-pills__pill {
+  font: inherit;
+  padding: var(--space-extra-small) var(--space-small);
+  border: 1px solid var(--basecolors-stroke-default);
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.ancestor-pills__pill--abstract {
+  color: var(--basecolors-text-subdued);
+  font-style: italic;
+}
+.ancestor-pills__pill--active {
+  background: var(--basecolors-frame-contrast);
+  border-color: var(--basecolors-frame-contrast);
+  color: var(--basecolors-text-light);
+}
+.ancestor-pills__pill--self {
+  font-weight: bold;
+  cursor: default;
+  border-color: var(--basecolors-stroke-default);
+}
+.ancestor-pills__clear {
+  font: inherit;
+  background: none;
+  border: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
