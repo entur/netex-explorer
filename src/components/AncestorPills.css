@@ -18,8 +18,9 @@
   font-style: italic;
 }
 .ancestor-pills__pill--active {
-  border-color: var(--basecolors-stroke-default);
-  color: inherit;
+  background: var(--basecolors-frame-contrast);
+  border-color: var(--basecolors-frame-contrast);
+  color: var(--basecolors-text-light);
 }
 .ancestor-pills__pill--self {
   font-weight: bold;

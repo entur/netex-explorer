@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { BannerAlertBox } from '@entur/alert'
 import { Loader } from '@entur/loader'
 import { ElementPage } from './components/ElementPage'
+import { EnumPage } from './components/EnumPage'
 import { AppLayout } from './components/AppLayout'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
@@ -108,6 +109,12 @@ export default function App() {
               onTab={(tab) => update({ ...state, tab })}
               onNavigate={(target) => update({ v: state.v, tab: state.tab, ...target })}
               file={loadedFile}
+            />
+          ) : current && !state.element && state.enum && current.enums[state.enum] ? (
+            <EnumPage
+              enumType={current.enums[state.enum]}
+              data={current}
+              onNavigate={(target) => update({ v: state.v, tab: state.tab, ...target })}
             />
           ) : (
             !state.enum && <p>Velg et element</p>

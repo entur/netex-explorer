@@ -55,6 +55,13 @@ describe('App', () => {
     expect(screen.getByLabelText('Søk')).toBeInTheDocument()
   })
 
+  it('viser enum-siden for ?enum=', async () => {
+    window.history.replaceState(null, '', '/?enum=StopTypeEnumeration')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'StopTypeEnumeration' })).toBeInTheDocument()
+    expect(screen.getByText('railStation')).toBeInTheDocument()
+  })
+
   it('viser elementnavn og modulgrupper', async () => {
     window.history.replaceState(null, '', '/?element=StopPlace')
     render(<App />)

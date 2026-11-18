@@ -12,11 +12,6 @@ dist
 dist-ssr
 *.local
 
-# Generated data files
-src/data/netex-elements.json
-src/data/netex-examples.json
-src/data/netex-enums.json
-
 # Environment variables
 .env
 .env.*
