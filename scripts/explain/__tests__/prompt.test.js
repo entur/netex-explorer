@@ -59,8 +59,10 @@ describe('promptFor', () => {
     expect(Object.keys(schema.properties.fields.properties)).toEqual(['Name', 'TransportMode'])
     expect(schema.properties.fields.properties.Name).toEqual({ type: 'STRING' })
   })
-  it('schema for type uten felt har tomme egenskaper', () => {
-    expect(promptFor(emptyReq).schema.properties.fields.properties).toEqual({})
+  it('schema for type uten felt utelater fields', () => {
+    const { schema } = promptFor(emptyReq)
+    expect(schema.properties.fields).toBeUndefined()
+    expect(schema.properties.type).toEqual({ type: 'STRING', nullable: true })
   })
   it('schema for enum er en streng', () => {
     const { schema } = promptFor(enumReq)
@@ -86,6 +88,9 @@ describe('validate', () => {
     expect(validate(typeReq, { type: 5, fields: 'x' })).toBeNull()
     expect(validate(enumReq, { enum: '' })).toBeNull()
     expect(validate(enumReq, [])).toBeNull()
+  })
+  it('ignorerer fields som er en liste', () => {
+    expect(validate(typeReq, { type: 'T', fields: ['Name'] })).toEqual({ type: 'T' })
   })
   it('validerer enum', () => {
     expect(validate(enumReq, { enum: ' Tekst ' })).toEqual({ enum: 'Tekst' })

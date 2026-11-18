@@ -18,13 +18,10 @@ function schemaFor(definition) {
   }
   const fieldProps = {}
   for (const f of definition.fields ?? []) fieldProps[f.name] = { ...STR }
-  return {
-    type: 'OBJECT',
-    properties: {
-      type: { type: 'STRING', nullable: true },
-      fields: { type: 'OBJECT', properties: fieldProps },
-    },
-  }
+  // Gemini avviser OBJECT med tom properties, så fields utelates for typer uten felter
+  const properties = { type: { type: 'STRING', nullable: true } }
+  if (Object.keys(fieldProps).length) properties.fields = { type: 'OBJECT', properties: fieldProps }
+  return { type: 'OBJECT', properties }
 }
 
 /** Bygger systemprompt, brukerprompt (definisjon og kontekst som JSON) og responseSchema. */
