@@ -1,3 +1,22 @@
+/* Smal tittellinje rett under Uniformen-headeren (ikke h1: elementsiden eier overskriften) */
+.app-layout__titlebar {
+  padding: var(--space-extra-small) var(--space-medium);
+  border-bottom: 1px solid var(--basecolors-frame-subdued);
+  background: var(--basecolors-frame-default);
+}
+.app-layout__title {
+  color: inherit;
+  font-weight: 600;
+  text-decoration: none;
+}
+.app-layout__title:hover {
+  text-decoration: underline;
+}
+.app-layout__title:focus-visible {
+  outline: 2px solid var(--basecolors-stroke-focus);
+  outline-offset: 2px;
+}
+
 .app-layout {
   display: grid;
   grid-template-columns: minmax(16rem, 22rem) minmax(0, 1fr);

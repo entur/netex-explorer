@@ -5,10 +5,11 @@ import { Tag } from '@entur/layout'
 import { Tooltip } from '@entur/tooltip'
 import { VisuallyHidden } from '@entur/a11y'
 import type { Element, Field, VersionData } from '../types'
-import { elementDisplay } from '../model/elementName'
+import { displayName, fieldLabel } from '../model/elementName'
 import { countFields, filterFields, type FieldFilter } from '../model/fieldFilters'
 import { KindBadge } from './KindBadge'
 import { EnumValueList } from './EnumValueList'
+import { AbstractHead, ElementName, GlobalElement } from './ElementRef'
 import './FieldsTab.css'
 
 export interface FieldsTabProps {
@@ -36,52 +37,34 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
   const [open, setOpen] = useState<Set<string>>(new Set())
   const counts = countFields(element)
   const rows = filterFields(element, filter).filter((f) => !originFilter || f.origin === originFilter)
-  const hasElement = (name: string) => data.elements.some((e) => e.name === name)
-
-  const link = (name: string, target: { element: string } | { enum: string }, exists: boolean): ReactNode =>
-    exists ? (
-      <button type="button" className="fields-tab__link" onClick={() => onNavigate(target)}>
-        {name}
-      </button>
-    ) : (
-      <span>{name}</span>
-    )
-
-  const listItem = (name: string): ReactNode => {
-    const d = elementDisplay(name, data)
-    return (
-      <>
-        {link(d.label, { element: d.target ?? d.label }, d.target !== null)}
-        {d.abstract && <> <Tag size="small">abstrakt</Tag></>}
-      </>
-    )
-  }
 
   const typeCell = (f: Field): ReactNode => {
-    if (f.kind === 'enum') return link(f.type, { enum: f.type }, !!data.enums[f.type])
-    if (f.kind === 'ref') {
-      const t = f.refTarget
-      return t ? link(t, { element: t }, hasElement(t)) : <span>{f.type}</span>
-    }
-    if (f.kind === 'list' && f.contains?.length) {
-      return (
-        <>
-          {f.contains.map((c, i) => (
-            <span key={c.name}>
-              {i > 0 && ', '}
-              {listItem(c.name)}
-            </span>
-          ))}
-        </>
+    if (f.kind === 'enum') {
+      return data.enums[f.type] ? (
+        <button type="button" className="fields-tab__link" onClick={() => onNavigate({ enum: f.type })}>
+          {f.type}
+        </button>
+      ) : (
+        <span>{f.type}</span>
       )
     }
-    if (f.kind === 'complex') return link(f.type, { element: f.type }, hasElement(f.type))
+    if (f.kind === 'list' && f.contains?.length) {
+      return f.contains.map((c, i) => (
+        <span key={`${c.name}:${c.type ?? ''}`}>
+          {i > 0 && ', '}
+          {c.ref ? <GlobalElement name={c.name} data={data} onNavigate={onNavigate} /> : <span>{displayName(c.name)}</span>}
+        </span>
+      ))
+    }
+    const members = f.refTarget ? data.substitutions[f.refTarget] : undefined
+    if (members) return <AbstractHead name={f.refTarget!} members={members} onNavigate={onNavigate} />
+    if (f.refTarget) return <ElementName name={f.refTarget} data={data} onNavigate={onNavigate} />
     return <span>{f.type}</span>
   }
 
   const choiceCell = (f: Field): ReactNode => {
     if (!f.choice) return null
-    const others = element.fields.filter((o) => o.choice?.id === f.choice!.id && o !== f).map((o) => o.name)
+    const others = element.fields.filter((o) => o.choice?.id === f.choice!.id && o !== f).map(fieldLabel)
     return (
       <Tooltip placement="top" content={others.length ? `Alternativer: ${others.join(', ')}` : 'Ingen andre alternativer'}>
         <span tabIndex={0} className="fields-tab__choice">
@@ -130,9 +113,9 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
               <TableRow key={key}>
                 <DataCell>
                   {f.kind === 'enum' && (
-                    <ExpandRowButton open={isOpen} aria-expanded={isOpen} onClick={toggle} aria-label={`${isOpen ? 'Skjul' : 'Vis'} verdier for ${f.name}`} />
+                    <ExpandRowButton open={isOpen} aria-expanded={isOpen} onClick={toggle} aria-label={`${isOpen ? 'Skjul' : 'Vis'} verdier for ${fieldLabel(f)}`} />
                   )}
-                  <span className="fields-tab__name">{f.name}</span>
+                  <span className="fields-tab__name">{fieldLabel(f)}</span>
                   {f.required && (
                     <span className="fields-tab__required" aria-hidden="true">
                       {' '}*

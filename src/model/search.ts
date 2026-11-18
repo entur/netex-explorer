@@ -39,7 +39,7 @@ function matchFields(elements: Element[], needle: string): { element: Element; f
   for (const element of [...elements].sort(byCodePoint)) {
     for (const field of element.fields) {
       if (!field.name.toLowerCase().includes(needle)) continue
-      const key = `${field.name}\u0000${field.origin}`
+      const key = `${field.isAttribute ? '@' : ''}${field.name}\u0000${field.origin}`
       const existing = hits.get(key)
       if (!existing || (element.name === field.origin && existing.element.name !== field.origin)) {
         hits.set(key, { element, field })

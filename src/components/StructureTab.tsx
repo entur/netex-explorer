@@ -2,9 +2,11 @@ import { useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { VisuallyHidden } from '@entur/a11y'
 import { Tag } from '@entur/layout'
 import type { Element, VersionData } from '../types'
-import { childNodes, rootNodes, type TreeNode } from '../model/structureTree'
+import { childNodes, opensElement, rootNodes, type TreeNode } from '../model/structureTree'
+import { fieldLabel } from '../model/elementName'
 import { KindBadge } from './KindBadge'
 import { FieldDetail } from './FieldDetail'
+import { AbstractHead } from './ElementRef'
 import './StructureTab.css'
 
 export interface StructureTabProps {
@@ -63,7 +65,8 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
         }
         const expandable = isExpandable(n)
         const isOpen = expandable && expanded.has(n.id)
-        const nodePath = n.kind === 'element' ? [...path, n.name] : path
+        const opened = opensElement(n, data)
+        const nodePath = opened ? [...path, opened] : path
         const row: Row = { node: n, level, parentId, path: nodePath, setSize: real.length, posInSet: ++pos, expandable, expanded: isOpen }
         items.push(row)
         rows.push(row)
@@ -138,7 +141,11 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
         <>
           <span className="structure-tab__name">{n.label}</span>
           {n.abstract && <Tag size="small">abstrakt</Tag>}
-          <span className="structure-tab__meta">{occurs(n.minOccurs, n.maxOccurs)}</span>
+          {n.members && <span className="structure-tab__meta">én av {n.members.length}</span>}
+          {!n.ref && n.type && <span className="structure-tab__meta">{n.type}</span>}
+          {n.minOccurs !== undefined && n.maxOccurs !== undefined && (
+            <span className="structure-tab__meta">{occurs(n.minOccurs, n.maxOccurs)}</span>
+          )}
           {n.cycle && (
             <button
               type="button"
@@ -158,7 +165,7 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
     const f = n.field
     return (
       <>
-        <span className="structure-tab__name">{f.isAttribute ? `@${f.name}` : f.name}</span>
+        <span className="structure-tab__name">{fieldLabel(f)}</span>
         {f.required && (
           <>
             <span aria-hidden="true">*</span>
@@ -182,13 +189,22 @@ export function StructureTab({ element, data, onNavigate }: StructureTabProps) {
         </section>
       )
     }
-    const exists = data.elements.some((e) => e.name === selected.name)
+    const exists = selected.ref && data.elements.some((e) => e.name === selected.name)
     return (
       <section className="field-detail" aria-label={`Detaljer for ${selected.label}`}>
         <h3 className="field-detail__name">{selected.label}</h3>
-        {selected.abstract && <Tag size="small">abstrakt</Tag>}
-        <p>Antall: {occurs(selected.minOccurs, selected.maxOccurs)}</p>
-        {exists ? (
+        {selected.minOccurs !== undefined && selected.maxOccurs !== undefined && (
+          <p>Antall: {occurs(selected.minOccurs, selected.maxOccurs)}</p>
+        )}
+        {selected.members ? (
+          <p>
+            <AbstractHead name={selected.name} members={selected.members} onNavigate={onNavigate} />
+          </p>
+        ) : !selected.ref ? (
+          <p className="structure-tab__hint">
+            Lokalt element{selected.type ? ` med typen ${selected.type}` : ''}.
+          </p>
+        ) : exists ? (
           <button type="button" className="structure-tab__link" onClick={() => onNavigate({ element: selected.name })}>
             Åpne {selected.label}
           </button>

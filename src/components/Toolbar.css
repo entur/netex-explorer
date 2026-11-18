@@ -9,13 +9,3 @@
 .toolbar__version {
   min-width: 12rem;
 }
-
-/* Dropdownen markerer ikke feltet som «fylt» når verdien er satt utenfra, så etiketten
-   lå oppå verdien. Flytt etiketten opp slik Linje gjør for fylte felt. */
-.toolbar__version:has(.eds-dropdown__selected-item:not(:empty)) .eds-input-group__label {
-  top: 0.375rem;
-  font-size: 0.75rem;
-  line-height: 0.75rem;
-  height: 10px;
-  padding: 0;
-}

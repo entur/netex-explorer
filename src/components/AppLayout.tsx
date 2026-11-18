@@ -12,6 +12,11 @@ export function AppLayout({ sidebar, toolbar, children }: AppLayoutProps) {
   return (
     <>
       <SkipToContent mainId="main-content">Hopp til innhold</SkipToContent>
+      <div className="app-layout__titlebar">
+        <a className="app-layout__title" href={import.meta.env.BASE_URL}>
+          Entur NeTEx-utforsker
+        </a>
+      </div>
       <div className="app-layout">
         <aside className="app-layout__sidebar">{sidebar}</aside>
         <div className="app-layout__content">

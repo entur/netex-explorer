@@ -8,8 +8,8 @@ export type FieldKind =
   | 'boolean'
   | 'integer'
   | 'decimal'
-
-export type AttributeKind = FieldKind
+  /** Typen er ikke xsd:* og finnes ikke i XSD-filene som er lest inn (f.eks. gml:) */
+  | 'unknown'
 
 export interface Choice {
   id: string
@@ -21,6 +21,10 @@ export interface ContainedElement {
   name: string
   minOccurs: string
   maxOccurs: string
+  /** true: `<xsd:element ref="name">` (globalt element); false: lokal deklarasjon med egen `type` */
+  ref: boolean
+  /** Deklarert type for lokale elementer (nøkkel i `structures` hvis den er en complexType) */
+  type?: string
 }
 
 export interface Field {
@@ -37,7 +41,10 @@ export interface Field {
   origin: string
   description: string
   contains?: ContainedElement[]
-  /** Kan peke på et abstrakt element som ikke finnes i `elements` */
+  /**
+   * Elementet feltet peker på: for `kind: 'ref'` det som refereres (kan være abstrakt og mangle i `elements`);
+   * for `<xsd:element ref="X">` ellers X når X er et konkret element; X når X er et abstrakt hode (nøkkel i `substitutions`).
+   */
   refTarget?: string
   /** Navn i `VersionData.structures` */
   structure?: string
@@ -79,7 +86,7 @@ export interface NeTExExample {
 export interface ParsedInstanceAttribute {
   name: string
   value: string
-  kind: AttributeKind
+  kind: FieldKind
 }
 
 export interface ParsedInstance {
@@ -114,5 +121,7 @@ export interface VersionData {
   elements: Element[]
   enums: Record<string, EnumType>
   structures: Record<string, Field[]>
+  /** Abstrakt element (substitusjonsgruppe-hode) → konkrete elementer som kan stå i stedet, sortert */
+  substitutions: Record<string, string[]>
   examples: NeTExExample[]
 }

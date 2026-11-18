@@ -14,3 +14,7 @@
 .kind-badge--ref { --kind-color: var(--standard-jungle); }
 .kind-badge--list { --kind-color: var(--standard-azure); }
 .kind-badge--complex { --kind-color: var(--standard-lilac); }
+.kind-badge__attr {
+  font-weight: bold;
+  margin-inline-end: 0.125em;
+}

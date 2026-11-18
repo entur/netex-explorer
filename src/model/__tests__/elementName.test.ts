@@ -1,16 +1,33 @@
 import { describe, it, expect } from 'vitest'
-import { elementDisplay } from '../elementName'
+import { displayName, elementLink, fieldLabel } from '../elementName'
 import { fixture } from './fixture'
 
-describe('elementDisplay', () => {
-  it('strips _Dummy, marks abstract and links when the stripped name exists', () => {
-    expect(elementDisplay('Quay_Dummy', fixture)).toEqual({ label: 'Quay', abstract: true, target: 'Quay' })
+describe('displayName', () => {
+  it('strips a trailing _Dummy and leaves other names alone', () => {
+    expect(displayName('ValidityCondition_Dummy')).toBe('ValidityCondition')
+    expect(displayName('Quay')).toBe('Quay')
+    expect(displayName('_Dummy')).toBe('_Dummy')
   })
-  it('has no target when the stripped name is not in data.elements', () => {
-    expect(elementDisplay('Nope_Dummy', fixture)).toEqual({ label: 'Nope', abstract: true, target: null })
+})
+
+describe('elementLink', () => {
+  it('links only names that are elements, never a stripped _Dummy name', () => {
+    expect(elementLink('Quay', fixture)).toEqual({ label: 'Quay', target: 'Quay', members: null })
+    expect(elementLink('Quay_Dummy', fixture)).toEqual({ label: 'Quay', target: null, members: null })
+    expect(elementLink('Missing', fixture)).toEqual({ label: 'Missing', target: null, members: null })
   })
-  it('leaves ordinary names alone', () => {
-    expect(elementDisplay('Quay', fixture)).toEqual({ label: 'Quay', abstract: false, target: 'Quay' })
-    expect(elementDisplay('Missing', fixture)).toEqual({ label: 'Missing', abstract: false, target: null })
+  it('gives the members of an abstract head from data.substitutions', () => {
+    expect(elementLink('ValidityCondition_Dummy', fixture)).toEqual({
+      label: 'ValidityCondition',
+      target: null,
+      members: ['Line', 'Quay'],
+    })
+  })
+})
+
+describe('fieldLabel', () => {
+  it('prefixes attributes with @ and strips _Dummy from element names', () => {
+    expect(fieldLabel({ name: 'id', isAttribute: true })).toBe('@id')
+    expect(fieldLabel({ name: 'FarePrice_Dummy', isAttribute: false })).toBe('FarePrice')
   })
 })

@@ -30,8 +30,8 @@ const stopPlace: Element = {
     field({ name: 'version', origin: 'Entity', isAttribute: true, description: 'Version of the entity.' }),
     field({ name: 'StopPlaceType', origin: 'StopPlace', type: 'StopTypeEnumeration', kind: 'enum', description: 'Type of stop place.' }),
     field({ name: 'quays', origin: 'StopPlace', type: 'quays_RelStructure', kind: 'list', contains: [
-      { name: 'QuayRef', minOccurs: '1', maxOccurs: 'unbounded' },
-      { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded' },
+      { name: 'QuayRef', minOccurs: '1', maxOccurs: 'unbounded', ref: true },
+      { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded', ref: true },
     ], description: 'Quays of the stop place.' }),
     field({ name: 'Name', origin: 'Zone', choice: { id: 'Zone#1', minOccurs: '0', maxOccurs: '1' } }),
     field({ name: 'ShortName', origin: 'Zone', choice: { id: 'Zone#1', minOccurs: '0', maxOccurs: '1' } }),
@@ -52,7 +52,7 @@ const quay: Element = {
     field({ name: 'id', origin: 'Entity', isAttribute: true, required: true, minOccurs: '1' }),
     field({ name: 'keyList', origin: 'DataManagedObject', type: 'KeyListStructure', kind: 'complex', structure: 'KeyListStructure' }),
     field({ name: 'quays', origin: 'Quay', type: 'quays_RelStructure', kind: 'list', contains: [
-      { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded' },
+      { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded', ref: true },
     ] }),
   ],
 }
@@ -87,10 +87,33 @@ const fareProduct: Element = {
   fields: [field({ name: 'id', origin: 'Entity', isAttribute: true, required: true, minOccurs: '1' })],
 }
 
+/** Abstrakte hoder, lokale elementer i contains, element-ref med innebygd type og ukjent type */
+const fareZone: Element = {
+  name: 'FareZone',
+  abstract: false,
+  part: 3,
+  module: 'fareProduct',
+  description: 'A fare zone.',
+  ancestors: [{ name: 'Entity', abstract: true }],
+  fields: [
+    field({ name: 'id', origin: 'Entity', isAttribute: true, required: true, minOccurs: '1', type: 'FareZoneIdType' }),
+    field({ name: 'status', origin: 'Entity', isAttribute: true, type: 'StopTypeEnumeration', kind: 'enum' }),
+    field({ name: 'validityConditions', origin: 'FareZone', type: 'validityConditions_RelStructure', kind: 'list', contains: [
+      { name: 'ValidityCondition_Dummy', minOccurs: '1', maxOccurs: 'unbounded', ref: true },
+      { name: 'Extra', minOccurs: '0', maxOccurs: '1', ref: false, type: 'KeyListStructure' },
+      { name: 'Plain', minOccurs: '0', maxOccurs: '1', ref: false, type: 'xsd:string' },
+      { name: 'Ghost', minOccurs: '0', maxOccurs: '1', ref: true },
+    ] }),
+    field({ name: 'TariffZoneRef_Dummy', origin: 'FareZone', type: 'ZoneRefStructure', kind: 'ref', refTarget: 'TariffZoneRef_Dummy' }),
+    field({ name: 'FareProduct', origin: 'FareZone', type: 'FareProduct_VersionStructure', kind: 'complex', structure: 'FareProduct_VersionStructure', refTarget: 'FareProduct' }),
+    field({ name: 'Area', origin: 'FareZone', type: 'gml:PolygonType', kind: 'unknown' }),
+  ],
+}
+
 export const fixture: VersionData = {
   version: 'v2.0',
   fetchedAt: '2026-01-01T00:00:00.000Z',
-  elements: [stopPlace, quay, line, entity, fareProduct],
+  elements: [stopPlace, quay, line, entity, fareProduct, fareZone],
   enums: {
     StopTypeEnumeration: {
       name: 'StopTypeEnumeration',
@@ -105,6 +128,10 @@ export const fixture: VersionData = {
     KeyListStructure: [
       field({ name: 'KeyValue', origin: 'KeyList', type: 'KeyValueStructure', kind: 'complex', required: true, minOccurs: '1', maxOccurs: 'unbounded' }),
     ],
+  },
+  substitutions: {
+    ValidityCondition_Dummy: ['Line', 'Quay'],
+    TariffZoneRef_Dummy: ['Line'],
   },
   examples: [{ filename: 'example.xml', label: 'Eksempel', xml: '<PublicationDelivery/>' }],
 }

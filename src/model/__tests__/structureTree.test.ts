@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { fixture } from './fixture'
-import { rootNodes, childNodes, type TreeNode } from '../structureTree'
+import { rootNodes, childNodes, opensElement, type TreeNode } from '../structureTree'
 
 const stopPlace = fixture.elements.find((e) => e.name === 'StopPlace')!
 const quay = fixture.elements.find((e) => e.name === 'Quay')!
@@ -77,15 +77,54 @@ describe('fieldNodes dividers', () => {
   })
 })
 
-describe('childNodes with _Dummy', () => {
-  it('shows stripped label, marks abstract, and is not expandable when target is missing', () => {
-    const dummyField = { ...fixture.elements[0].fields.find((f) => f.kind === 'list')!, contains: [
-      { name: 'Ghost_Dummy', minOccurs: '0', maxOccurs: '1' },
-      { name: 'Quay_Dummy', minOccurs: '0', maxOccurs: '1' },
-    ] }
-    const node = { kind: 'field' as const, id: 'x', field: dummyField, expandable: true }
-    const kids = childNodes(node, fixture, ['StopPlace'])
-    expect(kids[0]).toMatchObject({ kind: 'element', name: 'Ghost_Dummy', label: 'Ghost', abstract: true, expandable: false })
-    expect(kids[1]).toMatchObject({ kind: 'element', name: 'Quay', label: 'Quay', abstract: true, expandable: true })
+describe('abstract heads, local elements and element refs', () => {
+  const fareZone = fixture.elements.find((e) => e.name === 'FareZone')!
+  const roots = rootNodes(fareZone, fixture)
+  const fieldNode = (name: string) => roots.find((n) => n.kind === 'field' && n.field.name === name) as Extract<TreeNode, { kind: 'field' }>
+  type El = Extract<TreeNode, { kind: 'element' }>
+
+  it('contains: head with members, local entries by type, unknown refs plain', () => {
+    const kids = childNodes(fieldNode('validityConditions'), fixture, ['FareZone']) as El[]
+    expect(kids[0]).toMatchObject({ name: 'ValidityCondition_Dummy', label: 'ValidityCondition', ref: true, abstract: true, members: ['Line', 'Quay'], expandable: true })
+    expect(kids[1]).toMatchObject({ name: 'Extra', ref: false, type: 'KeyListStructure', abstract: false, expandable: true })
+    expect(kids[2]).toMatchObject({ name: 'Plain', ref: false, type: 'xsd:string', expandable: false })
+    expect(kids[3]).toMatchObject({ name: 'Ghost', ref: true, abstract: false, expandable: false })
+  })
+
+  it('a head expands to its member elements, with cycle rules', () => {
+    const [head, local] = childNodes(fieldNode('validityConditions'), fixture, ['FareZone']) as El[]
+    const members = childNodes(head, fixture, ['FareZone', 'Quay']) as El[]
+    expect(members.map((m) => [m.name, m.ref, m.expandable, m.cycle])).toEqual([
+      ['Line', true, true, false],
+      ['Quay', true, false, true],
+    ])
+    expect(childNodes(local, fixture, ['FareZone']).some((k) => k.kind === 'field' && k.field.name === 'KeyValue')).toBe(true)
+  })
+
+  it('a stripped _Dummy name is never linked to the concrete element', () => {
+    const f = { ...fieldNode('validityConditions').field, contains: [{ name: 'Quay_Dummy', minOccurs: '0', maxOccurs: '1', ref: true }] }
+    const [kid] = childNodes({ kind: 'field', id: 'x', field: f, expandable: true }, fixture, ['FareZone']) as El[]
+    expect(kid).toMatchObject({ name: 'Quay_Dummy', label: 'Quay', abstract: false, expandable: false })
+  })
+
+  it('a field that refs an abstract head expands to the members', () => {
+    const head = fieldNode('TariffZoneRef_Dummy')
+    expect(head.expandable).toBe(true)
+    expect((childNodes(head, fixture, ['FareZone']) as El[]).map((m) => m.name)).toEqual(['Line'])
+  })
+
+  it('a field that refs a concrete element expands to the element fields unless it is in the path', () => {
+    const fp = fieldNode('FareProduct')
+    expect(fp.expandable).toBe(true)
+    expect(opensElement(fp)).toBe('FareProduct')
+    expect(childNodes(fp, fixture, ['FareZone', 'FareProduct']).map((k) => (k.kind === 'field' ? k.field.name : k.kind))).toContain('id')
+    const inCycle = rootNodes(fareZone, fixture, '', ['FareProduct']).find((n) => n.kind === 'field' && n.field.name === 'FareProduct')
+    expect(inCycle).toMatchObject({ expandable: false })
+  })
+
+  it('unknown and ref fields to concrete elements are not expandable', () => {
+    expect(fieldNode('Area').expandable).toBe(false)
+    const siteRef = rootNodes(stopPlace, fixture).find((n) => n.kind === 'field' && n.field.name === 'SiteRef')
+    expect(siteRef).toMatchObject({ expandable: false })
   })
 })

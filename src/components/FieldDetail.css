@@ -35,3 +35,7 @@
   text-decoration: underline;
   cursor: pointer;
 }
+.field-detail__unknown {
+  margin: var(--space-extra-small) 0 0;
+  color: var(--basecolors-text-subdued);
+}

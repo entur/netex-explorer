@@ -1,6 +1,7 @@
 import { Heading1, Heading2 } from '@entur/typography'
 import { Table, TableHead, TableBody, TableRow, HeaderCell, DataCell } from '@entur/table'
 import type { EnumType, VersionData } from '../types'
+import { fieldLabel } from '../model/elementName'
 import './EnumPage.css'
 
 export interface EnumPageProps {
@@ -13,7 +14,7 @@ export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
   const usages = data.elements.flatMap((element) =>
     element.fields
       .filter((f) => f.kind === 'enum' && f.type === enumType.name)
-      .map((f) => ({ element: element.name, field: f.name })),
+      .map((f) => ({ element: element.name, field: fieldLabel(f) })),
   )
 
   return (

@@ -39,19 +39,6 @@ th {
   font-weight: 600;
 }
 
-/* Visually hide the TextField label when used inline in a compact bar */
-.search-label-hidden label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  border: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-}
-
 /* Brede tabeller ruller i egen beholder i stedet for å gi horisontal sidescroll */
 .table-scroll {
   max-width: 100%;

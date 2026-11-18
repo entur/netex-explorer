@@ -1,9 +1,11 @@
 import { useId, useMemo, useState } from 'react'
-import { TextField, SegmentedControl, SegmentedChoice } from '@entur/form'
+import { TextField } from '@entur/form'
+import { ChoiceChipGroup, ChoiceChip } from '@entur/chip'
 import { SideNavigation } from '@entur/menu/beta'
 import type { VersionData } from '../types'
 import { groupByModule, type PartFilter } from '../model/navigation'
 import { partName } from '../model/parts'
+import { fieldLabel } from '../model/elementName'
 import { search } from '../model/search'
 import { toSearch, type UrlState } from '../model/urlState'
 import './Sidebar.css'
@@ -29,6 +31,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
   // På smale skjermer er elementlisten foldet sammen når et element/enum er valgt (CSS skjuler den bare under 50rem)
   const [listOpen, setListOpen] = useState(!state.element && !state.enum)
   const listId = useId()
+  const partGroupName = useId()
 
   const groups = useMemo(() => (data ? groupByModule(data.elements, part) : []), [data, part])
   const results = useMemo(() => (data ? search(data, query) : null), [data, query])
@@ -59,18 +62,31 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
 
   return (
     <nav className="sidebar" aria-label="Elementer">
-      <TextField label="Søk" value={query} onChange={(e) => setQuery(e.target.value)} />
-      <SegmentedControl
+      <TextField
+        label="Søk"
+        value={query}
+        onChange={(e) => {
+          setQuery(e.target.value)
+          // Treffene ligger i elementlisten; på smal skjerm må den åpnes for at de skal synes
+          if (e.target.value.trim()) setListOpen(true)
+        }}
+      />
+      <ChoiceChipGroup
+        name={partGroupName}
         label="Del"
         value={String(part)}
-        onChange={(v) => setPart(v === 'alle' || v === null ? 'alle' : (Number(v) as PartFilter))}
+        onChange={(e) => {
+          const v = e.target.value
+          setPart(v === 'alle' ? 'alle' : (Number(v) as PartFilter))
+          setListOpen(true)
+        }}
       >
         {PART_CHOICES.map((c) => (
-          <SegmentedChoice key={c.value} value={c.value} title={c.title} aria-label={c.title ? `${c.label} – ${c.title}` : undefined}>
+          <ChoiceChip key={c.value} value={c.value} title={c.title} aria-label={c.title ? `${c.label} – ${c.title}` : undefined}>
             {c.label}
-          </SegmentedChoice>
+          </ChoiceChip>
         ))}
-      </SegmentedControl>
+      </ChoiceChipGroup>
 
       <button
         type="button"
@@ -93,7 +109,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
           {results.fields.length > 0 && (
             <SideNavigation.Group title="Felter">
               {results.fields.map(({ element, field }) =>
-                item(`${field.name} · fra ${field.origin}`, { element: element.name }, `f-${field.name}.${field.origin}`),
+                item(`${fieldLabel(field)} · fra ${field.origin}`, { element: element.name }, `f-${field.isAttribute ? '@' : ''}${field.name}.${field.origin}`),
               )}
             </SideNavigation.Group>
           )}

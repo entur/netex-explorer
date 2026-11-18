@@ -80,3 +80,67 @@ describe('StructureTab', () => {
     expect(calls).toEqual([{ element: 'Quay' }])
   })
 })
+
+describe('StructureTab heads, local elements, attributes and unknown types', () => {
+  const fareZone = fixture.elements.find((e) => e.name === 'FareZone')!
+  function setupZone(onNavigate: (t: { element: string } | { enum: string }) => void = () => {}) {
+    render(<StructureTab element={fareZone} data={fixture} onNavigate={onNavigate} />)
+  }
+
+  it('shows @ for attributes and never _Dummy', () => {
+    setupZone()
+    expect(screen.getByRole('treeitem', { name: /^@status/ })).toBeInTheDocument()
+    expect(screen.getByRole('treeitem', { name: /^TariffZoneRef\b/ })).toBeInTheDocument()
+    expect(screen.queryByText(/_Dummy/)).toBeNull()
+  })
+
+  it('a head in contains shows «abstrakt · én av N» and expands to its members', async () => {
+    const user = userEvent.setup()
+    setupZone()
+    await user.click(screen.getByRole('treeitem', { name: /validityConditions/ }))
+    await user.keyboard('{ArrowRight}')
+    const head = screen.getByRole('treeitem', { name: /^ValidityCondition.*abstrakt.*én av 2/ })
+    await user.click(head)
+    await user.keyboard('{ArrowRight}')
+    expect(head).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('treeitem', { name: /^Line\b/ })).toBeInTheDocument()
+    expect(screen.getByRole('treeitem', { name: /^Quay\b/ })).toBeInTheDocument()
+  })
+
+  it('a local element in contains expands to the fields of its type', async () => {
+    const user = userEvent.setup()
+    setupZone()
+    await user.click(screen.getByRole('treeitem', { name: /validityConditions/ }))
+    await user.keyboard('{ArrowRight}')
+    const extra = screen.getByRole('treeitem', { name: /^Extra\b/ })
+    await user.click(extra)
+    await user.keyboard('{ArrowRight}')
+    expect(screen.getByRole('treeitem', { name: /^KeyValue\b/ })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Åpne Extra/ })).toBeNull()
+  })
+
+  it('detail card: unknown type, head members and element ref link', async () => {
+    const user = userEvent.setup()
+    const calls: unknown[] = []
+    setupZone((t) => calls.push(t))
+    await user.click(screen.getByRole('treeitem', { name: /^Area\b/ }))
+    expect(screen.getByText('Typen finnes ikke i XSD-filene som er lest inn')).toBeInTheDocument()
+    await user.click(screen.getByRole('treeitem', { name: /^TariffZoneRef\b/ }))
+    await user.click(screen.getByRole('button', { name: 'Line' }))
+    expect(calls).toEqual([{ element: 'Line' }])
+    await user.click(screen.getByRole('treeitem', { name: /^FareProduct\b/ }))
+    await user.click(screen.getByRole('button', { name: 'FareProduct' }))
+    expect(calls).toEqual([{ element: 'Line' }, { element: 'FareProduct' }])
+  })
+
+  it('a field that refs a concrete element expands to the element fields', async () => {
+    const user = userEvent.setup()
+    setupZone()
+    const fp = screen.getByRole('treeitem', { name: /^FareProduct\b/ })
+    await user.click(fp)
+    await user.keyboard('{ArrowRight}')
+    expect(fp).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('treeitem', { name: /^@id\b/ }).length).toBe(2)
+  })
+})
+
