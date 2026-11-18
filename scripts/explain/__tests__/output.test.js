@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildVersionFile, pruneCache, summarize } from '../output.js'
+import { buildVersionFile, keepTimestampIfUnchanged, pruneCache, summarize } from '../output.js'
 
 const req = (key, name, kind = 'type') => ({ key, id: `${kind}:${name}`, definition: { kind, name } })
 const entry = (output) => ({ id: 'x', output, createdAt: '2026-01-01' })
@@ -85,5 +85,22 @@ describe('summarize', () => {
     expect(s).toContain("- **Line**: `Hei @someone, se #12 og 'kode'`")
     const long = summarize({}, { 'v2.0': file({ types: { L: 'x'.repeat(300) } }) }, { model: 'm' })
     expect(long).toContain(`\`${'x'.repeat(199)}…\``)
+  })
+})
+
+describe('keepTimestampIfUnchanged', () => {
+  const file = (text, generatedAt, model = 'm') => ({ version: 'v1', model, generatedAt, types: { A: text }, fields: {}, enums: {} })
+
+  it('beholder forrige generatedAt når innholdet er likt', () => {
+    expect(keepTimestampIfUnchanged(file('x', 'old'), file('x', 'new')).generatedAt).toBe('old')
+  })
+  it('bruker ny generatedAt når tekst endres', () => {
+    expect(keepTimestampIfUnchanged(file('x', 'old'), file('y', 'new')).generatedAt).toBe('new')
+  })
+  it('bruker ny generatedAt når modellen endres', () => {
+    expect(keepTimestampIfUnchanged(file('x', 'old'), file('x', 'new', 'm2')).generatedAt).toBe('new')
+  })
+  it('bruker ny generatedAt uten forrige fil', () => {
+    expect(keepTimestampIfUnchanged(null, file('x', 'new')).generatedAt).toBe('new')
   })
 })

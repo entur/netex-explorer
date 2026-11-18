@@ -4,7 +4,7 @@ import { fileURLToPath } from 'url'
 import { buildRequests, withKeys } from './explain/requests.js'
 import { PROMPT_VERSION } from './explain/prompt.js'
 import { runExplain } from './explain/run.js'
-import { buildVersionFile, pruneCache, summarize } from './explain/output.js'
+import { buildVersionFile, keepTimestampIfUnchanged, pruneCache, summarize } from './explain/output.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, '../public/data')
@@ -58,18 +58,23 @@ if (maxRequests > 0 && missing) {
   const { createGeminiClient } = await import('./explain/gemini.js')
   const client = await createGeminiClient({ project: PROJECT, location: LOCATION, model: MODEL })
   let sinceSave = 0
-  result = await runExplain({
-    requests,
-    cache,
-    client,
-    maxRequests,
-    onEntry: () => {
-      if (++sinceSave >= SAVE_EVERY) {
-        sinceSave = 0
-        writeCache(cache)
-      }
-    },
-  })
+  try {
+    result = await runExplain({
+      requests,
+      cache,
+      client,
+      maxRequests,
+      onEntry: () => {
+        if (++sinceSave >= SAVE_EVERY) {
+          sinceSave = 0
+          writeCache(cache)
+        }
+      },
+    })
+  } finally {
+    // Lagre det som er laget selv om kjøringen kastet
+    writeCache(cache)
+  }
 }
 
 // 4. Rydd og skriv hurtigbufferen
@@ -83,14 +88,14 @@ const after = {}
 for (const { version } of versions) {
   const path = join(DATA_DIR, `explanations-${version}.json`)
   before[version] = readJson(path, null)
-  after[version] = buildVersionFile({
+  after[version] = keepTimestampIfUnchanged(before[version], buildVersionFile({
     version,
     keys: byVersion[version],
     requests,
     cache,
     model: MODEL,
     generatedAt,
-  })
+  }))
   writeFileSync(path, toJson(after[version]))
 }
 writeFileSync(SUMMARY_PATH, summarize(before, after, { model: MODEL }))

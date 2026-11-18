@@ -105,3 +105,10 @@ export function summarize(before, after, { model, sampleSize = 10 }) {
   if (shown.length > 0) lines.push('', '## Utvalg av nye tekster', '', ...shown)
   return lines.join('\n') + '\n'
 }
+
+/** Beholder forrige `generatedAt` når alt annet er likt, slik at filen blir byte-identisk og ingen PR trengs. */
+export function keepTimestampIfUnchanged(before, after) {
+  if (!before) return after
+  const strip = (f) => JSON.stringify({ ...f, generatedAt: undefined })
+  return strip(before) === strip(after) ? { ...after, generatedAt: before.generatedAt } : after
+}
