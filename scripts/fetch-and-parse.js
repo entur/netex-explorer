@@ -1,55 +1,17 @@
-import { writeFileSync, mkdirSync } from 'fs'
+import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'fs'
 import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { parseXsd } from './parser/xsd-parser.js'
-import { resolveHierarchy } from './parser/hierarchy-resolver.js'
+import { resolveModel } from './parser/model-resolver.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const DATA_DIR = join(__dirname, '../src/data')
-const VERSIONS_DIR = join(DATA_DIR, 'versions')
+const DATA_DIR = join(__dirname, '../public/data')
 
 const GITHUB_API = 'https://api.github.com/repos/NeTEx-CEN/NeTEx'
 const GITHUB_CONTENTS_API = `${GITHUB_API}/contents`
 const BRANCHES_API = `${GITHUB_API}/branches`
 
-const PART1_DIRS = ['xsd/netex_part_1']
-const PART2_DIRS = ['xsd/netex_part_2']
-
-const PART1_GROUP_NAMES = [
-  'StopPlace', 'Quay', 'AccessSpace', 'Parking', 'PathLink', 'NavigationPath',
-  'Line', 'Route', 'Network', 'ScheduledStopPoint', 'ServiceLink', 'StopArea',
-  'Connection', 'FlexibleLine', 'SiteFrame', 'NetworkFrame',
-]
-
-const PART2_GROUP_NAMES = [
-  'ServiceJourney', 'VehicleJourney', 'TimetabledPassingTime',
-  'Block', 'VehicleService', 'Interchange', 'DeadRun', 'TrainNumber',
-]
-
-const PART3_DIRS = [
-  'xsd/netex_part_3/part3_fares',
-  'xsd/netex_part_3/part3_frames',
-  'xsd/netex_part_3/part3_salesTransactions',
-]
-
-// Framework dirs providing base types (TypeOfValue, entity, assignment, dayType, versionFrame)
-const FRAMEWORK_DIRS = [
-  'xsd/netex_framework/netex_responsibility',
-  'xsd/netex_framework/netex_genericFramework',
-  'xsd/netex_framework/netex_reusableComponents',
-    'xsd/netex_framework/netex_frames',
-    'xsd/netex_framework/netex_utility',
-]
-
 const EXAMPLES_DIR = 'examples/functions/fares'
-
-const TOP_GROUP_NAMES = [
-  'FareProduct', 'FarePrice', 'SalesOfferPackage', 'FareStructureElement',
-  'UsageParameter', 'ValidableElement', 'DistributionChannel', 'FulfilmentMethod',
-  'TypeOfTravelDocument', 'FareTable', 'FareSeries', 'GeographicStructureFactor',
-  'QualityStructureFactor', 'TimeStructureFactor', 'DistanceMatrixElement',
-  'FareZone', 'Tariff', 'PricingRule',
-]
 
 // Use GITHUB_TOKEN env var or fall back to gh CLI token to avoid rate limits
 async function getAuthHeaders() {
@@ -70,7 +32,7 @@ const AUTH_HEADERS = await getAuthHeaders()
  * @returns {Promise<string[]>} Array of branch names like ['v1.3', 'v2.0', 'v2.1-wip', 'v3.0-wip']
  */
 async function fetchBranches() {
-  const res = await fetch(BRANCHES_API, { headers: AUTH_HEADERS })
+  const res = await fetch(`${BRANCHES_API}?per_page=100`, { headers: AUTH_HEADERS })
   if (!res.ok) throw new Error(`Failed to fetch branches: ${res.status}`)
   const branches = await res.json()
   return branches
@@ -104,19 +66,6 @@ async function fetchText(path, version = 'master') {
   return res.text()
 }
 
-async function listXsdFiles(dirs, version = 'master') {
-  const files = []
-  for (const dir of dirs) {
-    const entries = await listFiles(dir, version)
-    for (const entry of entries) {
-      if (entry.name.endsWith('.xsd') && (entry.name.includes('_version') || entry.name.includes('_support'))) {
-        files.push(entry.path)
-      }
-    }
-  }
-  return files
-}
-
 /**
  * Recursively list all XSD _version/_support files under a top-level directory.
  * @param {string} topDir
@@ -140,85 +89,40 @@ async function listXsdFilesDeep(topDir, version = 'master') {
   return files
 }
 
-async function buildElementsJson(version = 'master') {
-  const merged = { elements: new Map(), types: new Map(), groups: new Map() }
+async function buildModel(version = 'master') {
+  const ctx = {
+    elements: new Map(), types: new Map(), groups: new Map(),
+    enums: new Map(), listTypes: new Map(), attributeGroups: new Map(),
+  }
   const partMap = new Map()
-  const allEnums = new Map()
 
-  console.log(`\n📦 Building elements for ${version}...`)
+  console.log(`\n📦 Building model for ${version}...`)
 
-  // Framework: types/groups only, no elements
-  console.log('  Fetching framework XSD file list...')
-  const frameworkPaths = await listXsdFiles(FRAMEWORK_DIRS, version)
-  console.log(`  Found ${frameworkPaths.length} framework XSD files`)
-  for (const path of frameworkPaths) {
-    process.stdout.write(`    Parsing ${path.split('/').pop()}...`)
-    const text = await fetchText(path, version)
-    if (!text) { console.log(' skipped (404)'); continue }
-    const { types, groups } = parseXsd(text)
-    for (const [k, v] of types) merged.types.set(k, v)
-    for (const [k, v] of groups) merged.groups.set(k, v)
-    console.log(' done')
+  // part 0 = framework; later parts win on name clashes
+  const sources = [
+    { label: 'framework', part: 0, top: 'xsd/netex_framework' },
+    { label: 'Part 1', part: 1, top: 'xsd/netex_part_1' },
+    { label: 'Part 2', part: 2, top: 'xsd/netex_part_2' },
+    { label: 'Part 3', part: 3, top: 'xsd/netex_part_3' },
+  ]
+  for (const { label, part, top } of sources) {
+    const paths = await listXsdFilesDeep(top, version)
+    console.log(`  Found ${paths.length} ${label} XSD files`)
+    for (const path of paths) {
+      process.stdout.write(`    Parsing ${path.split('/').pop()}...`)
+      const text = await fetchText(path, version)
+      if (!text) { console.log(' skipped (404)'); continue }
+      const parsed = parseXsd(text, path)
+      for (const key of Object.keys(ctx)) for (const [k, v] of parsed[key]) ctx[key].set(k, v)
+      for (const k of parsed.elements.keys()) partMap.set(k, part)
+      console.log(' done')
+    }
   }
 
-  // Part 1
-  console.log('  Fetching Part 1 XSD file list...')
-  const part1Paths = await listXsdFilesDeep(PART1_DIRS[0], version)
-  console.log(`  Found ${part1Paths.length} Part 1 XSD files`)
-  for (const path of part1Paths) {
-    process.stdout.write(`    Parsing ${path.split('/').pop()}...`)
-    const text = await fetchText(path, version)
-    if (!text) { console.log(' skipped (404)'); continue }
-    const { elements, types, groups } = parseXsd(text)
-    for (const [k, v] of elements) { merged.elements.set(k, v); partMap.set(k, 1) }
-    for (const [k, v] of types) merged.types.set(k, v)
-    for (const [k, v] of groups) merged.groups.set(k, v)
-    console.log(' done')
-  }
-
-  // Part 2
-  console.log('  Fetching Part 2 XSD file list...')
-  const part2Paths = await listXsdFilesDeep(PART2_DIRS[0], version)
-  console.log(`  Found ${part2Paths.length} Part 2 XSD files`)
-  for (const path of part2Paths) {
-    process.stdout.write(`    Parsing ${path.split('/').pop()}...`)
-    const text = await fetchText(path, version)
-    if (!text) { console.log(' skipped (404)'); continue }
-    const { elements, types, groups, enums } = parseXsd(text)
-    for (const [k, v] of elements) { merged.elements.set(k, v); partMap.set(k, 2) }
-    for (const [k, v] of types) merged.types.set(k, v)
-    for (const [k, v] of groups) merged.groups.set(k, v)
-    for (const [k, v] of enums) allEnums.set(k, v)
-    console.log(' done')
-  }
-
-  // Part 3 (processed last so Part 3 elements win if names overlap)
-  console.log('  Fetching Part 3 XSD file list...')
-  const part3Paths = await listXsdFiles(PART3_DIRS, version)
-  console.log(`  Found ${part3Paths.length} Part 3 XSD files`)
-  for (const path of part3Paths) {
-    process.stdout.write(`    Parsing ${path.split('/').pop()}...`)
-    const text = await fetchText(path, version)
-    if (!text) { console.log(' skipped (404)'); continue }
-    const { elements, types, groups, enums } = parseXsd(text)
-    for (const [k, v] of elements) { merged.elements.set(k, v); partMap.set(k, 3) }
-    for (const [k, v] of types) merged.types.set(k, v)
-    for (const [k, v] of groups) merged.groups.set(k, v)
-    for (const [k, v] of enums) allEnums.set(k, v)
-    console.log(' done')
-  }
-
-  const allTopGroups = [...PART1_GROUP_NAMES, ...PART2_GROUP_NAMES, ...TOP_GROUP_NAMES]
-  console.log('  Resolving hierarchy...')
-  const netexElements = resolveHierarchy(merged, allTopGroups, partMap)
-  console.log(`  ✓ Resolved ${netexElements.length} element types`)
-
-  // Convert enums Map to sorted object
-  const enumsObject = Object.fromEntries(
-    Array.from(allEnums.entries()).sort(([a], [b]) => a.localeCompare(b))
-  )
-
-  return { elements: netexElements, enums: enumsObject }
+  console.log('  Resolving model...')
+  const { elements, enums, structures } = resolveModel(ctx, partMap)
+  console.log(`  ✓ Resolved ${elements.length} elements, ${Object.keys(enums).length} enums, ${Object.keys(structures).length} structures`)
+  return { elements, enums, structures }
 }
 
 async function buildExamplesJson(version) {
@@ -249,95 +153,49 @@ async function buildExamplesJson(version) {
 
 async function main() {
   console.log('=== NeTEx Multi-Version Fetch & Parse ===\n')
-  
-  // Create directories
   mkdirSync(DATA_DIR, { recursive: true })
-  mkdirSync(VERSIONS_DIR, { recursive: true })
-  
-  // Fetch available branches
+
+  const requested = process.argv.slice(2)
   console.log('🔍 Fetching available NeTEx versions from GitHub...')
-  const branches = await fetchBranches()
-  console.log(`Found ${branches.length} versions: ${branches.join(', ')}\n`)
-  
+  const available = await fetchBranches()
+  const branches = requested.length ? requested : available
+  const unknown = branches.filter((b) => !available.includes(b))
+  if (unknown.length) throw new Error(`Unknown version(s): ${unknown.join(', ')}. Available: ${available.join(', ')}`)
+  console.log(`Processing ${branches.length} versions: ${branches.join(', ')}\n`)
+
   const versionsData = []
-  
-  // Process each version
   for (const version of branches) {
-    console.log(`\n${'='.repeat(60)}`)
-    console.log(`Processing ${version}`)
-    console.log('='.repeat(60))
-    
+    console.log(`\n${'='.repeat(60)}\nProcessing ${version}\n${'='.repeat(60)}`)
     try {
-      // Build elements and enums
-      const { elements, enums } = await buildElementsJson(version)
-      
-      // Build examples
+      const { elements, enums, structures } = await buildModel(version)
       const examples = await buildExamplesJson(version)
-      
-      // Save version-specific files
-      const versionFile = `netex-${version}.json`
-      const versionPath = join(VERSIONS_DIR, versionFile)
-      
-      const versionData = {
-        version,
-        elements,
-        enums,
-        examples,
-        fetchedAt: new Date().toISOString(),
-      }
-      
-      writeFileSync(versionPath, JSON.stringify(versionData, null, 2))
-      console.log(`  ✓ Wrote ${versionFile}`)
-      
-      versionsData.push({
-        version,
-        file: versionFile,
-        elementCount: elements.length,
-        enumCount: Object.keys(enums).length,
-        exampleCount: examples.length,
-        fetchedAt: versionData.fetchedAt,
-      })
-      
+      const fetchedAt = new Date().toISOString()
+      const file = `netex-${version}.json`
+      writeFileSync(join(DATA_DIR, file), JSON.stringify({ version, fetchedAt, elements, enums, structures, examples }))
+      console.log(`  ✓ Wrote ${file}`)
+      versionsData.push({ version, file, elementCount: elements.length, enumCount: Object.keys(enums).length, fetchedAt })
     } catch (err) {
       console.error(`  ❌ Error processing ${version}:`, err.message)
-      versionsData.push({
-        version,
-        error: err.message,
-        fetchedAt: new Date().toISOString(),
-      })
+      versionsData.push({ version, error: err.message })
     }
   }
-  
-  // Write versions manifest
-  const manifest = {
-    versions: versionsData,
-    generatedAt: new Date().toISOString(),
+
+  // A partial run must not drop the other versions from the manifest.
+  const manifestPath = join(DATA_DIR, 'versions.json')
+  let previous = []
+  if (requested.length && existsSync(manifestPath)) {
+    previous = JSON.parse(readFileSync(manifestPath, 'utf8')).versions.filter((v) => !branches.includes(v.version))
   }
-  writeFileSync(join(DATA_DIR, 'versions-manifest.json'), JSON.stringify(manifest, null, 2))
-  console.log(`\n✓ Wrote versions-manifest.json with ${versionsData.length} versions`)
-  
-  // Also write latest stable version (v2.0) to default location for backward compatibility
-  const stableVersion = versionsData.find(v => v.version === 'v2.0')
-  if (stableVersion && !stableVersion.error) {
-    const { readFileSync } = await import('fs')
-    const stableData = JSON.parse(readFileSync(join(VERSIONS_DIR, stableVersion.file), 'utf8'))
-    writeFileSync(join(DATA_DIR, 'netex-elements.json'), JSON.stringify(stableData.elements, null, 2))
-    writeFileSync(join(DATA_DIR, 'netex-enums.json'), JSON.stringify(stableData.enums, null, 2))
-    writeFileSync(join(DATA_DIR, 'netex-examples.json'), JSON.stringify(stableData.examples, null, 2))
-    console.log('✓ Wrote default files (v2.0) for backward compatibility')
-  }
-  
-  console.log('\n' + '='.repeat(60))
-  console.log('✅ All versions fetched successfully!')
-  console.log('='.repeat(60))
+  const byVersion = (a, b) => available.indexOf(a.version) - available.indexOf(b.version)
+  const versions = [...previous, ...versionsData].sort(byVersion)
+  writeFileSync(manifestPath, JSON.stringify({ generatedAt: new Date().toISOString(), versions }))
+  console.log(`\n✓ Wrote versions.json with ${versions.length} versions`)
+
   console.log('\nSummary:')
-  versionsData.forEach(v => {
-    if (v.error) {
-      console.log(`  ❌ ${v.version}: ${v.error}`)
-    } else {
-      console.log(`  ✓ ${v.version}: ${v.elementCount} elements, ${v.enumCount} enums, ${v.exampleCount} examples`)
-    }
-  })
+  for (const v of versionsData) {
+    console.log(v.error ? `  ❌ ${v.version}: ${v.error}` : `  ✓ ${v.version}: ${v.elementCount} elements, ${v.enumCount} enums`)
+  }
+  if (versionsData.some((v) => v.error)) process.exitCode = 1
 }
 
 main().catch((err) => { console.error(err); process.exit(1) })

@@ -284,6 +284,24 @@ describe('field kinds', () => {
     expect(fields[0]).toMatchObject({ kind: 'enum', isList: true, type: 'ColorEnumeration' })
   })
 
+  it('RelStructure contains expands groups and the base type chain', () => {
+    const ctx = context(
+      `<xsd:complexType name="base_RelStructure"><xsd:sequence><xsd:element ref="Base"/></xsd:sequence></xsd:complexType>
+       ${group('ItemsGroup', '<xsd:choice maxOccurs="unbounded"><xsd:element ref="Quay"/></xsd:choice>')}
+       <xsd:complexType name="quays_RelStructure"><xsd:complexContent><xsd:extension base="base_RelStructure">
+         <xsd:sequence><xsd:group ref="ItemsGroup"/></xsd:sequence>
+       </xsd:extension></xsd:complexContent></xsd:complexType>
+       <xsd:element name="Quay" type="xsd:string"/>`,
+    )
+    const el = context(
+      '<xsd:element name="Holder"><xsd:complexType><xsd:sequence><xsd:element name="quays" type="quays_RelStructure"/></xsd:sequence></xsd:complexType></xsd:element>',
+    )
+    for (const key of Object.keys(ctx)) for (const [k, v] of ctx[key]) el[key].set(k, v)
+    const f = resolveElement('Holder', el).fields[0]
+    expect(f.kind).toBe('list')
+    expect(f.contains.map((c) => c.name)).toEqual(['Base', 'Quay'])
+    expect(f.contains[1].maxOccurs).toBe('unbounded')
+  })
   it('RelStructure contains Quay and QuayRef', () => {
     const { fields } = one(
       `<xsd:complexType name="quays_RelStructure"><xsd:sequence>

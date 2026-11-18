@@ -1,4 +1,4 @@
-import { displayName } from './naming.js'
+import { displayName, moduleFromPath, humanizeModule } from './naming.js'
 
 /** @typedef {import('./xsd-parser.js').TypeDef} TypeDef */
 /** @typedef {import('./xsd-parser.js').Particle} Particle */
@@ -215,18 +215,22 @@ function resolveKind(name, type, ctx) {
   return { kind: SCALAR_KINDS[type] ?? 'string' }
 }
 
-/** Element particles of a RelStructure type, direct or in choices; cardinality comes from the enclosing choice. */
+/** Element particles of a RelStructure type and its bases, direct, in choices or in groups; cardinality comes from the enclosing choice. */
 function containsOf(type, ctx) {
   const result = []
-  const visit = (particles, inherited) => {
+  const visit = (particles, inherited, path) => {
     for (const p of particles) {
       if (p.kind === 'element') {
         result.push({ name: p.name, minOccurs: inherited?.minOccurs ?? p.minOccurs, maxOccurs: inherited?.maxOccurs ?? p.maxOccurs })
-      } else if (p.kind === 'choice') visit(p.content, { minOccurs: p.minOccurs, maxOccurs: p.maxOccurs })
-      else if (p.kind === 'sequence') visit(p.content, inherited)
+      } else if (p.kind === 'choice') visit(p.content, { minOccurs: p.minOccurs, maxOccurs: p.maxOccurs }, path)
+      else if (p.kind === 'sequence') visit(p.content, inherited, path)
+      else if (p.kind === 'group') {
+        const group = ctx.groups.get(p.ref)
+        if (group && !path.has(p.ref)) visit(group.content, inherited, new Set(path).add(p.ref))
+      }
     }
   }
-  visit(ctx.types.get(type)?.content ?? [], null)
+  for (const { def } of followBases([], type, ctx).reverse()) visit(def.content, null, new Set())
   return result
 }
 
@@ -276,18 +280,8 @@ export function resolveModel(ctx, partMap) {
       fields,
     })
   }
-  elements.sort((a, b) => a.name.localeCompare(b.name))
+  elements.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
   return { elements, enums: Object.fromEntries(ctx.enums), structures }
 }
 
-/** 'xsd/…/netex_ifopt_stopPlace_version.xsd' → 'stopPlace' */
-export function moduleFromPath(path) {
-  const file = path.split('/').pop().replace(/\.xsd$/, '').replace(/^netex_/, '').replace(/_version$/, '')
-  return file.split('_').pop()
-}
-
-/** 'stopPlace' → 'Stop place' */
-export function humanizeModule(module) {
-  const words = module.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
-  return words.charAt(0).toUpperCase() + words.slice(1)
-}
+export { moduleFromPath, humanizeModule }
