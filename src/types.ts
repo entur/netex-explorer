@@ -125,3 +125,16 @@ export interface VersionData {
   substitutions: Record<string, string[]>
   examples: NeTExExample[]
 }
+
+/** Forhåndsgenererte KI-forklaringer for én versjon (public/data/explanations-<versjon>.json) */
+export interface Explanations {
+  version: string
+  model: string
+  generatedAt: string
+  /** Elementnavn → forklaring */
+  types: Record<string, string>
+  /** `<origin>.<feltnavn>` → forklaring */
+  fields: Record<string, string>
+  /** Enumnavn → forklaring */
+  enums: Record<string, string>
+}

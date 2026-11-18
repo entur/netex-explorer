@@ -2,6 +2,8 @@ import { Heading1, Heading2 } from '@entur/typography'
 import { Table, TableHead, TableBody, TableRow, HeaderCell, DataCell } from '@entur/table'
 import type { EnumType, VersionData } from '../types'
 import { fieldLabel } from '../model/elementName'
+import { AiExplanation } from './AiExplanation'
+import { useExplanation } from '../model/explanations'
 import './EnumPage.css'
 
 export interface EnumPageProps {
@@ -11,6 +13,7 @@ export interface EnumPageProps {
 }
 
 export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
+  const explanation = useExplanation('enums', enumType.name)
   const usages = data.elements.flatMap((element) =>
     element.fields
       .filter((f) => f.kind === 'enum' && f.type === enumType.name)
@@ -22,6 +25,7 @@ export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
       <header className="enum-page__header">
         <Heading1>{enumType.name}</Heading1>
         {enumType.description && <p className="enum-page__description">{enumType.description}</p>}
+        <AiExplanation text={explanation} />
       </header>
 
       <section aria-labelledby="enum-page-values">
