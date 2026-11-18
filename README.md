@@ -48,9 +48,9 @@ BASE_PATH=/netex-overview/ npm run build
 
 #### Uniformen
 
-Ved bygging hentes Entur sitt felles skall fra Uniformen
+Ved bygging (og ved `npm run dev`) hentes Entur sitt felles skall fra Uniformen
 (`https://uniformen.entur.no/ssr?simple=true&locale=nb-NO`, tidsavbrudd 2000 ms) og settes inn i `index.html`.
-Feiler kallet, bygges appen uten skall. Dette skjer bare ved bygging, ikke i `npm run dev`.
+Feiler kallet, bygges appen uten skall.
 
 ### Skrifter
 
