@@ -1,53 +1,5 @@
-/** Top-level grouping categories for NeTEx elements */
-export type ElementGroup =
-  // Part 1 — Network & Stops
-  | 'AccessSpace'
-  | 'Connection'
-  | 'FareZone'
-  | 'FlexibleLine'
-  | 'Line'
-  | 'NavigationPath'
-  | 'Network'
-  | 'Parking'
-  | 'PathLink'
-  | 'Quay'
-  | 'Route'
-  | 'ScheduledStopPoint'
-  | 'ServiceLink'
-  | 'SiteFrame'
-  | 'StopArea'
-  | 'StopPlace'
-  // Part 2 — Timetables
-  | 'Block'
-  | 'DeadRun'
-  | 'Interchange'
-  | 'ServiceJourney'
-  | 'TimetabledPassingTime'
-  | 'TrainNumber'
-  | 'VehicleJourney'
-  | 'VehicleService'
-  // Part 3 — Fares
-  | 'DistanceMatrixElement'
-  | 'DistributionChannel'
-  | 'FarePrice'
-  | 'FareProduct'
-  | 'FareStructureElement'
-  | 'FareTable'
-  | 'FulfilmentMethod'
-  | 'PricingRule'
-  | 'QualityStructureFactor'
-  | 'SalesOfferPackage'
-  | 'Tariff'
-  | 'TimeStructureFactor'
-  | 'TypeOfTravelDocument'
-  | 'UsageParameter'
-  | 'ValidableElement'
-  // All parts
-  | 'Other'
-  // Virtual group for enumerations
-  | 'Enumerations'
-
-export type AttributeKind =
+/** Datamodell skrevet av XSD-parseren til public/data/netex-<versjon>.json */
+export type FieldKind =
   | 'enum'
   | 'ref'
   | 'list'
@@ -57,29 +9,65 @@ export type AttributeKind =
   | 'integer'
   | 'decimal'
 
-export interface NeTExAttribute {
-  name: string
-  type: string
-  kind: AttributeKind
+export type AttributeKind = FieldKind
+
+export interface Choice {
+  id: string
   minOccurs: string
   maxOccurs: string
+}
+
+export interface ContainedElement {
+  name: string
+  minOccurs: string
+  maxOccurs: string
+}
+
+export interface Field {
+  name: string
+  type: string
+  kind: FieldKind
+  isAttribute: boolean
+  isList: boolean
+  minOccurs: string
+  maxOccurs: string
+  required: boolean
+  choice?: Choice
+  /** Elementet (eller typen) feltet er definert på */
+  origin: string
   description: string
+  contains?: ContainedElement[]
+  /** Kan peke på et abstrakt element som ikke finnes i `elements` */
+  refTarget?: string
+  /** Navn i `VersionData.structures` */
+  structure?: string
 }
 
-export interface NeTExInheritedAttribute extends NeTExAttribute {
-  inheritedFrom: string
-}
-
-export interface NeTExElement {
+export interface Ancestor {
   name: string
   abstract: boolean
-  parent: string | null
-  group: ElementGroup
+}
+
+export interface Element {
+  name: string
+  abstract: boolean
   part: 0 | 1 | 2 | 3
+  /** Rå modulnavn, f.eks. 'stopPlace' (leselig etikett lages i navigation.ts) */
+  module: string
   description: string
-  inheritedFrom: string[]       // ordered closest-first, e.g. ["FareProduct", "PriceableObject", "DataManagedObject"]
-  attributes: NeTExAttribute[]
-  inheritedAttributes: NeTExInheritedAttribute[]
+  ancestors: Ancestor[]
+  fields: Field[]
+}
+
+export interface EnumValue {
+  value: string
+  description: string
+}
+
+export interface EnumType {
+  name: string
+  description: string
+  values: EnumValue[]
 }
 
 export interface NeTExExample {
@@ -109,30 +97,22 @@ export interface LoadedFile {
   instanceMap: InstanceMap
 }
 
-/** Maps enum type name to array of allowed values */
-export type NeTExEnums = Record<string, string[]>
+// --- Versjonshåndtering ---
 
-// --- Version management types ---
+export type VersionManifestEntry =
+  | { version: string; file: string; elementCount: number; enumCount: number; fetchedAt: string }
+  | { version: string; error: string }
 
 export interface VersionManifest {
-  versions: VersionInfo[]
   generatedAt: string
-}
-
-export interface VersionInfo {
-  version: string
-  file?: string
-  elementCount?: number
-  enumCount?: number
-  exampleCount?: number
-  fetchedAt: string
-  error?: string
+  versions: VersionManifestEntry[]
 }
 
 export interface VersionData {
   version: string
-  elements: NeTExElement[]
-  enums: NeTExEnums
-  examples: NeTExExample[]
   fetchedAt: string
+  elements: Element[]
+  enums: Record<string, EnumType>
+  structures: Record<string, Field[]>
+  examples: NeTExExample[]
 }

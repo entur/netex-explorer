@@ -10,6 +10,7 @@
 @import '@entur/button/dist/styles.css';
 @import '@entur/alert/dist/styles.css';
 @import '@entur/menu/dist/styles.css';
+@import '@entur/menu/beta/styles';
 @import '@entur/modal/dist/styles.css';
 @import '@entur/tooltip/dist/styles.css';
 @import '@entur/form/dist/styles.css';

@@ -38,7 +38,7 @@ function walkNode(node: unknown, result: InstanceMap): void {
       const instances = toArray(value)
       for (const inst of instances) {
         if (typeof inst !== 'object' || inst === null) continue
-        const id = (inst as any)['@_id'] ?? ''
+        const id = ((inst as Record<string, unknown>)['@_id'] as string | undefined) ?? ''
         const attributes = extractAttributes(inst as Record<string, unknown>)
         const rawXml = buildRawXml(key, inst as Record<string, unknown>)
         if (!result[key]) result[key] = []
