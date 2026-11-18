@@ -54,8 +54,9 @@ Feiler kallet, bygges appen uten skall.
 
 ### Skrifter
 
-Entur sin skrift Nationale er lisensiert, og repoet har ingen egne filer for den. Inntil skriftfilene er lagt til brukes Arial
-som reserve.
+Skriften Nationale kommer fra `@entur/typography`, som leverer `@font-face` og skriftfilene, og de blir med i bygget.
+Arial brukes bare som reserve. Nationale er lisensiert for offisielle Entur-produkter, som appen skal være når den flyttes til
+Entur-organisasjonen.
 
 ## NeTEx-versjoner
 
