@@ -80,6 +80,14 @@ describe('tabs', () => {
   })
 })
 
+describe('xml-fane uten fil', () => {
+  it('viser Felter-fanen', () => {
+    setup({ tab: 'xml' })
+    expect(screen.getByRole('tab', { name: 'Felter' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('checkbox', { name: /Alle/ })).toBeInTheDocument()
+  })
+})
+
 describe('EnumValueList', () => {
   it('viser melding når enum mangler', () => {
     render(<EnumValueList typeName="X" />)

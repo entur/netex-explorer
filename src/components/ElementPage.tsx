@@ -26,6 +26,7 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
   const element = data.elements.find((e) => e.name === name)
   const [originState, setOriginState] = useState<{ name: string; origin: string | null }>({ name, origin: null })
   if (!element) return null
+  const activeTab: ElementTab = tab === 'xml' && !file ? 'felter' : tab
   const originFilter = originState.name === name ? originState.origin : null
   const setOrigin = (origin: string | null) => setOriginState({ name, origin })
 
@@ -46,7 +47,7 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
           onNavigate={onNavigate}
         />
       </header>
-      <Tabs index={TABS.indexOf(tab)} onChange={(i) => onTab(TABS[i])}>
+      <Tabs index={TABS.indexOf(activeTab)} onChange={(i) => onTab(TABS[i])}>
         <TabList>
           <Tab>Felter</Tab>
           <Tab>Struktur</Tab>

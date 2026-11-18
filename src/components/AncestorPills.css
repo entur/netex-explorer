@@ -7,10 +7,10 @@
 .ancestor-pills__pill {
   font: inherit;
   padding: var(--space-extra-small) var(--space-small);
-  border: 1px solid var(--basecolors-border-default);
+  border: 1px solid var(--basecolors-stroke-default);
   border-radius: 999px;
   background: transparent;
-  color: var(--basecolors-text-default);
+  color: inherit;
   cursor: pointer;
 }
 .ancestor-pills__pill--abstract {
@@ -18,19 +18,19 @@
   font-style: italic;
 }
 .ancestor-pills__pill--active {
-  border-color: var(--basecolors-text-default);
-  color: var(--basecolors-text-default);
+  border-color: var(--basecolors-stroke-default);
+  color: inherit;
 }
 .ancestor-pills__pill--self {
   font-weight: bold;
   cursor: default;
-  border-color: var(--basecolors-text-default);
+  border-color: var(--basecolors-stroke-default);
 }
 .ancestor-pills__clear {
   font: inherit;
   background: none;
   border: none;
-  color: var(--basecolors-text-default);
+  color: inherit;
   text-decoration: underline;
   cursor: pointer;
 }

@@ -6,7 +6,7 @@
   padding: 0 var(--space-extra-small);
   border: 1px solid var(--kind-color);
   border-radius: var(--space-extra-small);
-  color: var(--kind-color);
+  color: inherit;
   font-size: 0.75rem;
   white-space: nowrap;
 }

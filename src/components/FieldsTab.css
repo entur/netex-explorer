@@ -13,11 +13,11 @@
   padding: 0;
   background: none;
   border: none;
-  color: var(--basecolors-text-default);
+  color: inherit;
   text-decoration: underline;
   cursor: pointer;
 }
 .fields-tab__required {
-  color: var(--basecolors-text-default);
+  color: inherit;
   font-weight: bold;
 }

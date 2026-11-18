@@ -118,7 +118,7 @@ export function FieldsTab({ element, data, originFilter, onNavigate }: FieldsTab
               <TableRow key={key}>
                 <DataCell>
                   {f.kind === 'enum' && (
-                    <ExpandRowButton open={isOpen} onClick={toggle} aria-label={`${isOpen ? 'Skjul' : 'Vis'} verdier for ${f.name}`} />
+                    <ExpandRowButton open={isOpen} aria-expanded={isOpen} onClick={toggle} aria-label={`${isOpen ? 'Skjul' : 'Vis'} verdier for ${f.name}`} />
                   )}
                   <span className="fields-tab__name">{f.name}</span>
                   {f.required && (
