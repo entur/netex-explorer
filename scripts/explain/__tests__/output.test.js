@@ -63,7 +63,7 @@ describe('summarize', () => {
     const s = summarize({ 'v2.0': before }, { 'v2.0': after }, { model: 'm' })
     expect(s).toMatch(/v2\.0.*1 ny.*1 endret.*1 fjernet/s)
     expect(s.split('\n')[0]).toMatch(/KI-generert/)
-    expect(s).toContain('- **Fresh**: f')
+    expect(s).toContain('- **Fresh**: `f`')
     expect(s).not.toContain('- **Line**')
   })
   it('summarize håndterer at det ikke fantes noen fil før', () => {
@@ -75,5 +75,15 @@ describe('summarize', () => {
     const s = summarize({ 'v2.0': null, 'v1.3': many }, { 'v2.0': many, 'v1.3': many }, { model: 'm', sampleSize: 2 })
     expect(s).toMatch(/v1\.3.*0 nye.*0 endret.*0 fjernet/s)
     expect(s.match(/^- \*\*/gm)).toHaveLength(2)
+  })
+  it('rapporterer versjon som finnes før men ikke etter, som fjernet', () => {
+    const s = summarize({ 'v1.3': file({ types: { A: 'a', B: 'b' } }) }, {}, { model: 'm' })
+    expect(s).toMatch(/v1\.3.*0 nye.*0 endret.*2 fjernet/s)
+  })
+  it('renser eksempeltekster til én inline-kode-span', () => {
+    const s = summarize({}, { 'v2.0': file({ types: { Line: 'Hei @someone, se #12\nog `kode`' } }) }, { model: 'm' })
+    expect(s).toContain("- **Line**: `Hei @someone, se #12 og 'kode'`")
+    const long = summarize({}, { 'v2.0': file({ types: { L: 'x'.repeat(300) } }) }, { model: 'm' })
+    expect(long).toContain(`\`${'x'.repeat(199)}…\``)
   })
 })

@@ -61,6 +61,15 @@ function flatten(file) {
   return out
 }
 
+const MAX_SAMPLE_LENGTH = 200
+
+/** Gjør teksten trygg i en PR-beskrivelse: én linje, avkortet, og i kode slik at @navn og #nr ikke utløser varsler. */
+function sanitize(text) {
+  let t = String(text).replace(/\s+/g, ' ').trim().replace(/`/g, "'")
+  if (t.length > MAX_SAMPLE_LENGTH) t = `${t.slice(0, MAX_SAMPLE_LENGTH - 1)}…`
+  return `\`${t}\``
+}
+
 /** Markdown til PR-beskrivelsen: modell, endringer per versjon og et utvalg nye tekster. */
 export function summarize(before, after, { model, sampleSize = 10 }) {
   const lines = [
@@ -73,9 +82,10 @@ export function summarize(before, after, { model, sampleSize = 10 }) {
   ]
   const samples = new Map()
 
-  for (const version of Object.keys(after)) {
+  const versions = [...new Set([...Object.keys(before), ...Object.keys(after)])].sort()
+  for (const version of versions) {
     const prev = flatten(before[version])
-    const next = flatten(after[version])
+    const next = flatten(after[version]) // manglende etter-fil: alt regnes som fjernet
     let added = 0
     let changed = 0
     let removed = 0
@@ -84,7 +94,7 @@ export function summarize(before, after, { model, sampleSize = 10 }) {
       if (!old) {
         added++
         const sampleKey = `${name}\n${text}`
-        if (!samples.has(sampleKey)) samples.set(sampleKey, `- **${name}**: ${text}`)
+        if (!samples.has(sampleKey)) samples.set(sampleKey, `- **${name}**: ${sanitize(text)}`)
       } else if (old.text !== text) changed++
     }
     for (const id of prev.keys()) if (!next.has(id)) removed++
