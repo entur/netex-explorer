@@ -1,0 +1,11 @@
+# Selvbetjeningsmanifest for Enturs plattformorkestrator (entur/ai, guides/platform/self-service.md).
+# Gir dette repoet Workload Identity Federation mot Google Cloud og GitHub-miljøet «prd», med
+# miljøvariablene WORKLOAD_IDENTITY_PROVIDER og SERVICE_ACCOUNT som cloud-auth-handlingen bruker.
+# metadata.id må være nøyaktig lik repo-navnet. Må være «apply»-et før netex.yaml.
+apiVersion: orchestrator.entur.io/github/v1
+kind: GitHubActions
+metadata:
+  id: netex-explorer
+spec:
+  environments:
+    - prd
