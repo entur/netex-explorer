@@ -14,6 +14,16 @@ describe('search', () => {
     const r = search(fixture, 'quays')
     expect(r.fields.some((f) => f.element.name === 'StopPlace' && f.field.name === 'quays')).toBe(true)
   })
+  it('finner arvet felt med abstrakt origin, ett treff per (navn, origin)', () => {
+    const hits = search(fixture, 'keylist').fields
+    expect(hits).toHaveLength(1)
+    expect(hits[0].field.origin).toBe('DataManagedObject')
+    expect(hits[0].element.name).toBe('Quay') // første i kodepunktrekkefølge, origin finnes ikke som element
+  })
+  it('lenker til origin-elementet når det finnes', () => {
+    const hits = search(fixture, 'quays').fields
+    expect(hits.filter((h) => h.field.origin === 'StopPlace' && h.element.name === 'StopPlace')).toHaveLength(1)
+  })
   it('tom q gir tomme lister', () => {
     expect(search(fixture, '  ')).toEqual({ elements: [], fields: [], enums: [] })
   })

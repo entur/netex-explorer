@@ -36,7 +36,7 @@ const stopPlace: Element = {
     field({ name: 'Name', origin: 'Zone', choice: { id: 'Zone#1', minOccurs: '0', maxOccurs: '1' } }),
     field({ name: 'ShortName', origin: 'Zone', choice: { id: 'Zone#1', minOccurs: '0', maxOccurs: '1' } }),
     field({ name: 'Mystery', origin: 'StopPlace', type: 'MissingEnumeration', kind: 'enum' }),
-    field({ name: 'keyList', origin: 'Entity', type: 'KeyListStructure', kind: 'complex', structure: 'KeyListStructure' }),
+    field({ name: 'keyList', origin: 'DataManagedObject', type: 'KeyListStructure', kind: 'complex', structure: 'KeyListStructure' }),
     field({ name: 'SiteRef', origin: 'Site', type: 'SiteRef', kind: 'ref', refTarget: 'Site' }),
   ],
 }
@@ -50,6 +50,7 @@ const quay: Element = {
   ancestors: [{ name: 'Entity', abstract: true }],
   fields: [
     field({ name: 'id', origin: 'Entity', isAttribute: true, required: true, minOccurs: '1' }),
+    field({ name: 'keyList', origin: 'DataManagedObject', type: 'KeyListStructure', kind: 'complex', structure: 'KeyListStructure' }),
     field({ name: 'quays', origin: 'Quay', type: 'quays_RelStructure', kind: 'list', contains: [
       { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded' },
     ] }),

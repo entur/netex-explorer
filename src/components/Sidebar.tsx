@@ -80,7 +80,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
           {results.fields.length > 0 && (
             <SideNavigation.Group title="Felter">
               {results.fields.map(({ element, field }) =>
-                item(`${element.name}.${field.name}`, { element: element.name }, `f-${element.name}.${field.name}`),
+                item(`${field.name} · fra ${field.origin}`, { element: element.name }, `f-${field.name}.${field.origin}`),
               )}
             </SideNavigation.Group>
           )}

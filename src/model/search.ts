@@ -17,17 +17,8 @@ export function search(data: VersionData, q: string): SearchResult {
     if (result.elements.length < MAX && element.name.toLowerCase().includes(needle)) {
       result.elements.push(element)
     }
-    if (result.fields.length < MAX) {
-      for (const field of element.fields) {
-        // Bare felter definert på selve elementet, ikke arvede kopier
-        if (field.origin !== element.name) continue
-        if (field.name.toLowerCase().includes(needle)) {
-          result.fields.push({ element, field })
-          if (result.fields.length >= MAX) break
-        }
-      }
-    }
   }
+  result.fields = matchFields(data.elements, needle).slice(0, MAX)
   for (const e of Object.values(data.enums)) {
     if (result.enums.length >= MAX) break
     if (
@@ -38,4 +29,22 @@ export function search(data: VersionData, q: string): SearchResult {
     }
   }
   return result
+}
+
+const byCodePoint = (a: Element, b: Element) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0)
+
+/** Ett treff per (feltnavn, origin). Lenker til elementet som heter origin hvis det finnes, ellers første element med feltet. */
+function matchFields(elements: Element[], needle: string): { element: Element; field: Field }[] {
+  const hits = new Map<string, { element: Element; field: Field }>()
+  for (const element of [...elements].sort(byCodePoint)) {
+    for (const field of element.fields) {
+      if (!field.name.toLowerCase().includes(needle)) continue
+      const key = `${field.name}\u0000${field.origin}`
+      const existing = hits.get(key)
+      if (!existing || (element.name === field.origin && existing.element.name !== field.origin)) {
+        hits.set(key, { element, field })
+      }
+    }
+  }
+  return [...hits.values()]
 }

@@ -91,7 +91,7 @@ describe('App', () => {
     await userEvent.type(box, 'quays')
     const nav = screen.getByRole('navigation', { name: 'Elementer' })
     expect(within(nav).getByText('Felter')).toBeInTheDocument()
-    expect(within(nav).getByText('StopPlace.quays')).toBeInTheDocument()
+    expect(within(nav).getByText('quays · fra StopPlace')).toBeInTheDocument()
   })
 
   it('viser feil når lasting feiler', async () => {
