@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseXsd } from '../xsd-parser.js'
-import { resolveElement, resolveModel, moduleFromPath, humanizeModule } from '../model-resolver.js'
+import { resolveElement, resolveModel, moduleFromPath } from '../model-resolver.js'
 
 const wrap = (body) =>
   `<?xml version="1.0" encoding="UTF-8"?>
@@ -8,7 +8,7 @@ const wrap = (body) =>
 
 /** Parses each XSD body and merges the maps into one context, like the pipeline does. */
 function context(...bodies) {
-  const ctx = { elements: new Map(), types: new Map(), groups: new Map(), enums: new Map(), listTypes: new Map(), attributeGroups: new Map() }
+  const ctx = { elements: new Map(), types: new Map(), groups: new Map(), enums: new Map(), listTypes: new Map(), attributeGroups: new Map(), simpleTypes: new Map() }
   for (const body of bodies) {
     const parsed = parseXsd(wrap(body))
     for (const key of Object.keys(ctx)) for (const [k, v] of parsed[key]) ctx[key].set(k, v)
@@ -343,6 +343,210 @@ describe('field kinds', () => {
   })
 })
 
+describe('element refs and unknown types', () => {
+  const holder = (extra, inner) => {
+    const ctx = context(
+      extra,
+      `<xsd:complexType name="HolderStructure"><xsd:sequence>${inner}</xsd:sequence></xsd:complexType>`,
+      '<xsd:element name="Holder" type="HolderStructure"/>',
+    )
+    return { ctx, fields: resolveElement('Holder', ctx).fields }
+  }
+  const VALID_BETWEEN = `
+    <xsd:complexType name="ValidBetween_VersionStructure"><xsd:sequence><xsd:element name="FromDate" type="xsd:dateTime"/></xsd:sequence></xsd:complexType>
+    <xsd:element name="ValidBetween"><xsd:complexType><xsd:complexContent>
+      <xsd:restriction base="ValidBetween_VersionStructure"><xsd:sequence><xsd:element name="FromDate" type="xsd:dateTime"/></xsd:sequence></xsd:restriction>
+    </xsd:complexContent></xsd:complexType></xsd:element>`
+
+  it('ref to an element with an inline type uses its base type and links the element', () => {
+    const { fields } = holder(VALID_BETWEEN, '<xsd:element ref="ValidBetween" minOccurs="0"/>')
+    expect(fields[0]).toMatchObject({
+      name: 'ValidBetween',
+      type: 'ValidBetween_VersionStructure',
+      kind: 'complex',
+      structure: 'ValidBetween_VersionStructure',
+      refTarget: 'ValidBetween',
+      minOccurs: '0',
+    })
+  })
+
+  it('ref to a concrete element with a named type sets refTarget whatever the kind', () => {
+    const { fields } = holder(
+      `<xsd:element name="PrivateCode" type="PrivateCodeStructure"/>
+       <xsd:complexType name="PrivateCodeStructure"><xsd:simpleContent><xsd:extension base="xsd:normalizedString"/></xsd:simpleContent></xsd:complexType>`,
+      '<xsd:element ref="PrivateCode" minOccurs="0"/>',
+    )
+    expect(fields[0]).toMatchObject({ kind: 'complex', type: 'PrivateCodeStructure', refTarget: 'PrivateCode' })
+  })
+
+  it('a local element is never linked to a global element with the same name', () => {
+    const { fields } = holder(VALID_BETWEEN, '<xsd:element name="ValidBetween" type="xsd:string"/>')
+    expect(fields[0]).toMatchObject({ kind: 'string', type: 'xsd:string' })
+    expect(fields[0].refTarget).toBeUndefined()
+  })
+
+  it('unresolvable types are unknown; named simpleTypes resolve through their base chain', () => {
+    const { fields } = holder(
+      `<xsd:simpleType name="ObjectIdType"><xsd:restriction base="xsd:normalizedString"/></xsd:simpleType>
+       <xsd:simpleType name="CountType"><xsd:restriction base="xsd:nonNegativeInteger"/></xsd:simpleType>
+       <xsd:simpleType name="SmallCountType"><xsd:restriction base="CountType"/></xsd:simpleType>
+       <xsd:simpleType name="EitherType"><xsd:union memberTypes="xsd:date xsd:dateTime"/></xsd:simpleType>`,
+      `<xsd:element name="Area" type="gml:PolygonType"/>
+       <xsd:element name="Id" type="ObjectIdType"/>
+       <xsd:element name="Count" type="SmallCountType"/>
+       <xsd:element name="When" type="EitherType"/>
+       <xsd:element name="Ratio" type="xsd:double"/>
+       <xsd:element name="ghosts" type="ghosts_RelStructure"/>`,
+    )
+    expect(fields.map((f) => [f.name, f.kind])).toEqual([
+      ['Area', 'unknown'],
+      ['Id', 'string'],
+      ['Count', 'integer'],
+      ['When', 'string'],
+      ['Ratio', 'decimal'],
+      ['ghosts', 'unknown'],
+    ])
+  })
+
+  it('ref to an element that is not in the parsed files is unknown and named after the element', () => {
+    const { fields } = holder('', '<xsd:element ref="gml:Polygon" minOccurs="0"/><xsd:element ref="SingleJourneyRef" minOccurs="0"/>')
+    expect(fields.map((f) => [f.name, f.type, f.kind, f.refTarget])).toEqual([
+      ['gml:Polygon', 'gml:Polygon', 'unknown', undefined],
+      ['SingleJourneyRef', 'SingleJourneyRef', 'unknown', undefined],
+    ])
+  })
+
+  it('a union of enums is an enum with the values of its members', () => {
+    const { ctx, fields } = holder(
+      `<xsd:simpleType name="PortableEnumeration"><xsd:restriction base="xsd:string"><xsd:enumeration value="bike"/></xsd:restriction></xsd:simpleType>
+       <xsd:simpleType name="PersonalEnumeration"><xsd:restriction base="xsd:string"><xsd:enumeration value="car"/><xsd:enumeration value="bike"/></xsd:restriction></xsd:simpleType>
+       <xsd:simpleType name="SimpleEnumeration"><xsd:annotation><xsd:documentation>Both.</xsd:documentation></xsd:annotation><xsd:union memberTypes="PortableEnumeration PersonalEnumeration"/></xsd:simpleType>
+       <xsd:simpleType name="SimpleListOfEnumerations"><xsd:list itemType="SimpleEnumeration"/></xsd:simpleType>
+       <xsd:simpleType name="MixedType"><xsd:union memberTypes="PortableEnumeration xsd:string"/></xsd:simpleType>`,
+      `<xsd:element name="Category" type="SimpleEnumeration"/>
+       <xsd:element name="Categories" type="SimpleListOfEnumerations"/>
+       <xsd:element name="Mixed" type="MixedType"/>`,
+    )
+    expect(fields.map((f) => [f.name, f.kind, f.type, f.isList])).toEqual([
+      ['Category', 'enum', 'SimpleEnumeration', false],
+      ['Categories', 'enum', 'SimpleEnumeration', true],
+      ['Mixed', 'string', 'MixedType', false],
+    ])
+    expect(resolveModel(ctx, new Map()).enums.SimpleEnumeration).toEqual({
+      name: 'SimpleEnumeration',
+      description: 'Both.',
+      values: [
+        { value: 'bike', description: '' },
+        { value: 'car', description: '' },
+      ],
+    })
+  })
+
+  it('attributes with an inline simpleType resolve like named ones', () => {
+    const ctx = context(
+      `<xsd:simpleType name="TypeOfInfoLinkEnumeration"><xsd:restriction base="xsd:string"><xsd:enumeration value="icon"/></xsd:restriction></xsd:simpleType>
+       <xsd:complexType name="InfoLinkStructure"><xsd:simpleContent><xsd:extension base="xsd:anyURI">
+         <xsd:attribute name="typeOfInfoLink"><xsd:simpleType><xsd:list itemType="TypeOfInfoLinkEnumeration"/></xsd:simpleType></xsd:attribute>
+         <xsd:attribute name="targetPlatform"><xsd:simpleType><xsd:restriction base="xsd:normalizedString"/></xsd:simpleType></xsd:attribute>
+       </xsd:extension></xsd:simpleContent></xsd:complexType>
+       <xsd:element name="InfoLink" type="InfoLinkStructure"/>`,
+    )
+    expect(resolveElement('InfoLink', ctx).fields.map((f) => [f.name, f.kind, f.type, f.isList])).toEqual([
+      ['typeOfInfoLink', 'enum', 'TypeOfInfoLinkEnumeration', true],
+      ['targetPlatform', 'string', 'xsd:normalizedString', false],
+    ])
+  })
+
+  it('contains entries record ref and the declared type of local elements', () => {
+    const { ctx, fields } = holder(
+      `<xsd:complexType name="quays_RelStructure"><xsd:sequence><xsd:choice maxOccurs="unbounded">
+         <xsd:element ref="QuayRef"/>
+         <xsd:element name="Quay" type="QuayStructure"/>
+       </xsd:choice></xsd:sequence></xsd:complexType>
+       <xsd:complexType name="QuayStructure"><xsd:sequence><xsd:element name="PublicCode" type="xsd:string"/></xsd:sequence></xsd:complexType>
+       <xsd:element name="QuayRef" type="QuayRefStructure"/>`,
+      '<xsd:element name="quays" type="quays_RelStructure"/>',
+    )
+    expect(fields[0].contains).toEqual([
+      { name: 'QuayRef', minOccurs: '1', maxOccurs: 'unbounded', ref: true },
+      { name: 'Quay', minOccurs: '1', maxOccurs: 'unbounded', ref: false, type: 'QuayStructure' },
+    ])
+    expect(resolveModel(ctx, new Map()).structures.QuayStructure.map((f) => f.name)).toEqual(['PublicCode'])
+  })
+})
+
+describe('substitution groups', () => {
+  const X = '<xsd:complexType name="XStructure"><xsd:sequence><xsd:element name="x" type="xsd:string"/></xsd:sequence></xsd:complexType>'
+  const ctx = () =>
+    context(
+      X,
+      `<xsd:element name="ValidityCondition_Dummy" type="XStructure" abstract="true"/>
+       <xsd:element name="ValidityCondition" substitutionGroup="ValidityCondition_Dummy" type="XStructure"/>
+       <xsd:element name="ValidBetween" substitutionGroup="ValidityCondition_Dummy" type="XStructure"/>
+       <xsd:element name="AvailabilityCondition" substitutionGroup="ValidityCondition" type="XStructure"/>
+       <xsd:element name="Mid_" abstract="true" substitutionGroup="ValidityCondition_Dummy" type="XStructure"/>
+       <xsd:element name="Leaf" substitutionGroup="Mid_" type="XStructure"/>
+       <xsd:element name="Unused_Dummy" abstract="true" type="XStructure"/>
+       <xsd:element name="Empty_Dummy" abstract="true" type="XStructure"/>
+       <xsd:element name="OrgRef_Dummy" abstract="true" type="OrganisationRefStructure"/>
+       <xsd:complexType name="validityConditions_RelStructure"><xsd:sequence><xsd:choice maxOccurs="unbounded">
+         <xsd:element ref="ValidityCondition_Dummy"/>
+       </xsd:choice></xsd:sequence></xsd:complexType>
+       <xsd:complexType name="HolderStructure"><xsd:sequence>
+         <xsd:element name="validityConditions" type="validityConditions_RelStructure" minOccurs="0"/>
+         <xsd:element ref="Empty_Dummy" minOccurs="0"/>
+         <xsd:element ref="OrgRef_Dummy" minOccurs="0"/>
+       </xsd:sequence></xsd:complexType>
+       <xsd:element name="Holder" type="HolderStructure"/>`,
+    )
+
+  it('maps every referenced abstract head to its concrete members, transitively and sorted', () => {
+    const { substitutions } = resolveModel(ctx(), new Map())
+    expect(substitutions).toEqual({
+      ValidityCondition_Dummy: ['AvailabilityCondition', 'Leaf', 'ValidBetween', 'ValidityCondition'],
+      Empty_Dummy: [],
+      OrgRef_Dummy: [],
+    })
+  })
+
+  it('a field that refs an abstract head points refTarget at the head', () => {
+    const { fields } = resolveElement('Holder', ctx())
+    expect(fields.find((f) => f.name === 'Empty_Dummy').refTarget).toBe('Empty_Dummy')
+    expect(fields.find((f) => f.name === 'OrgRef_Dummy')).toMatchObject({ kind: 'ref', refTarget: 'OrgRef_Dummy' })
+  })
+})
+
+describe('duplicate fields', () => {
+  it('merges the same element from two choice alternatives into one field without choice', () => {
+    const ctx = context(
+      group(
+        'JourneyFrequencyGroup',
+        `<xsd:choice>
+           <xsd:sequence><xsd:element name="FirstDepartureTime" type="xsd:time"/><xsd:element name="FirstDayOffset" type="xsd:integer" minOccurs="0"/></xsd:sequence>
+           <xsd:sequence><xsd:element name="FirstArrivalTime" type="xsd:time"/><xsd:element name="FirstDayOffset" type="xsd:integer" minOccurs="0"/></xsd:sequence>
+         </xsd:choice>`,
+      ),
+      ext('JourneyGroup_VersionStructure', 'Nothing', '<xsd:group ref="JourneyFrequencyGroup"/>'),
+      '<xsd:element name="JourneyGroup" type="JourneyGroup_VersionStructure"/>',
+    )
+    const { fields } = resolveElement('JourneyGroup', ctx)
+    expect(names(fields)).toEqual(['FirstDepartureTime', 'FirstDayOffset', 'FirstArrivalTime'])
+    expect(fields[1].choice).toBeUndefined()
+    expect(fields[1].required).toBe(false)
+    expect(fields[0].choice).toBeDefined()
+  })
+
+  it('merged field is required only if every occurrence is', () => {
+    const ctx = context(
+      '<xsd:complexType name="TStructure"><xsd:sequence><xsd:element name="A" type="xsd:string"/><xsd:element name="A" type="xsd:string" minOccurs="0"/></xsd:sequence></xsd:complexType>',
+      '<xsd:element name="T" type="TStructure"/>',
+    )
+    const { fields } = resolveElement('T', ctx)
+    expect(fields).toHaveLength(1)
+    expect(fields[0].required).toBe(false)
+  })
+})
+
 describe('resolveModel', () => {
   it('excludes abstract elements and adds part, module and sorting', () => {
     const ctx = context(
@@ -368,9 +572,5 @@ describe('module helpers', () => {
   it('moduleFromPath', () => {
     expect(moduleFromPath('xsd/netex_part_1/part1_ifopt/netex_ifopt_stopPlace_version.xsd')).toBe('stopPlace')
     expect(moduleFromPath('xsd/netex_part_3/part3_fares/netex_fareProduct_version.xsd')).toBe('fareProduct')
-  })
-  it('humanizeModule', () => {
-    expect(humanizeModule('stopPlace')).toBe('Stop place')
-    expect(humanizeModule('fareProduct')).toBe('Fare product')
   })
 })

@@ -18,8 +18,7 @@ export function moduleFromPath(path) {
   return file.split('_').pop()
 }
 
-/** 'stopPlace' → 'Stop place' */
-export function humanizeModule(module) {
-  const words = module.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
-  return words.charAt(0).toUpperCase() + words.slice(1)
+/** Every XSD file is parsed: definitions also live in files without `_version`/`_support` (e.g. netex_utility_types.xsd). */
+export function isSchemaFile(name) {
+  return name.endsWith('.xsd')
 }

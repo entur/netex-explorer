@@ -1,10 +1,10 @@
-import { displayName, moduleFromPath, humanizeModule } from './naming.js'
+import { displayName, moduleFromPath } from './naming.js'
 
 /** @typedef {import('./xsd-parser.js').TypeDef} TypeDef */
 /** @typedef {import('./xsd-parser.js').Particle} Particle */
-/** @typedef {{ elements: Map<string, any>, types: Map<string, TypeDef>, groups: Map<string, {content: Particle[]}>, attributeGroups?: Map<string, {attributes: any[], attributeGroupRefs: string[]}>, enums: Map<string, any>, listTypes: Map<string, string> }} Context */
+/** @typedef {{ elements: Map<string, any>, types: Map<string, TypeDef>, groups: Map<string, {content: Particle[]}>, attributeGroups?: Map<string, {attributes: any[], attributeGroupRefs: string[]}>, enums: Map<string, any>, listTypes: Map<string, string>, simpleTypes?: Map<string, {base: string|null}> }} Context */
 /** @typedef {{ id: string, minOccurs: string, maxOccurs: string }} Choice */
-/** @typedef {{ name: string, type: string, kind: string, isAttribute: boolean, isList: boolean, minOccurs: string, maxOccurs: string, required: boolean, choice?: Choice, origin: string, description: string, refTarget?: string, contains?: {name: string, minOccurs: string, maxOccurs: string}[], structure?: string }} Field */
+/** @typedef {{ name: string, type: string, kind: string, isAttribute: boolean, isList: boolean, minOccurs: string, maxOccurs: string, required: boolean, choice?: Choice, origin: string, description: string, refTarget?: string, contains?: {name: string, minOccurs: string, maxOccurs: string, ref: boolean, type?: string}[], structure?: string }} Field */
 /** @typedef {{ label: string, def: TypeDef }} ChainEntry  label = displayName of the type (element name for an inline type) */
 
 /**
@@ -27,11 +27,36 @@ export function resolveType(typeName, ctx) {
 function resolveChain(name, chain, ctx) {
   if (chain.length === 0) return { ancestors: [], fields: [] }
   const rootFirst = [...chain].reverse()
-  const state = { ctx, origins: introducers(rootFirst, ctx), choiceCounters: new Map() }
+  const state = { ctx, origins: introducers(rootFirst, ctx), choiceCounters: new Map(), alternatives: new Map() }
   return {
     ancestors: ancestorsOf(name, chain, ctx),
-    fields: [...attributeFields(rootFirst, ctx), ...particleFields(chain, 0, state)],
+    fields: mergeDuplicates([...attributeFields(rootFirst, ctx), ...particleFields(chain, 0, state)], state.alternatives),
   }
+}
+
+/**
+ * One field per (origin, name, isAttribute), at its first position. The merged field is required only if every
+ * occurrence is; occurrences in different alternatives of the same choice lose `choice` (present whichever is used).
+ */
+function mergeDuplicates(fields, alternatives) {
+  const seen = new Map()
+  const result = []
+  for (const f of fields) {
+    const key = `${f.origin}\u0000${f.name}\u0000${f.isAttribute}`
+    const first = seen.get(key)
+    if (!first) {
+      seen.set(key, { field: f, alternatives: new Set([alternatives.get(f)]), choices: new Set([f.choice?.id]) })
+      result.push(f)
+      continue
+    }
+    first.field.required = first.field.required && f.required
+    first.alternatives.add(alternatives.get(f))
+    first.choices.add(f.choice?.id)
+  }
+  for (const { field, alternatives: alts, choices } of seen.values()) {
+    if (field.choice && choices.size === 1 && alts.size > 1) delete field.choice
+  }
+  return result
 }
 
 /** The element's effective type followed by its bases, element first. Stops at unknown or repeated types. */
@@ -160,10 +185,12 @@ function expand(particles, scope, state) {
     switch (p.kind) {
       case 'element': {
         const target = p.ref ? state.ctx.elements.get(p.name) : undefined
-        fields.push(
-          makeField(state.ctx, {
+        const missing = p.ref && !target // e.g. gml:Polygon or a Part 5 element: not in the parsed files
+        const field = makeField(state.ctx, {
             name: p.name,
-            type: p.type ?? target?.type ?? '',
+            type: missing ? p.name : (p.ref ? target.type ?? target.inlineType?.base : p.type) ?? '',
+            unknown: missing,
+            elementRef: p.ref ? p.name : undefined,
             isAttribute: false,
             minOccurs: p.minOccurs,
             maxOccurs: p.maxOccurs,
@@ -171,8 +198,9 @@ function expand(particles, scope, state) {
             choice: scope.choice,
             origin: (scope.typeLevel && state.origins.elements.get(p.name)) || scope.origin,
             description: p.description || target?.description || '',
-          }),
-        )
+          })
+        if (scope.alternative) state.alternatives.set(field, scope.alternative)
+        fields.push(field)
         break
       }
       case 'group': {
@@ -190,7 +218,9 @@ function expand(particles, scope, state) {
         const n = (state.choiceCounters.get(scope.origin) ?? 0) + 1
         state.choiceCounters.set(scope.origin, n)
         const choice = { id: `${scope.origin}#${n}`, minOccurs: p.minOccurs, maxOccurs: p.maxOccurs }
-        fields.push(...expand(p.content, { ...scope, required, choice }, state))
+        p.content.forEach((alternative, i) => {
+          fields.push(...expand([alternative], { ...scope, required, choice, alternative: `${choice.id}:${i}` }, state))
+        })
         break
       }
     }
@@ -198,30 +228,99 @@ function expand(particles, scope, state) {
   return fields
 }
 
-const SCALAR_KINDS = { 'xsd:boolean': 'boolean', 'xsd:integer': 'integer', 'xsd:decimal': 'decimal' }
+const INTEGER = ['integer', 'nonNegativeInteger', 'positiveInteger', 'negativeInteger', 'nonPositiveInteger', 'int', 'long', 'short', 'byte', 'unsignedInt', 'unsignedLong', 'unsignedShort', 'unsignedByte']
+const SCALAR_KINDS = {
+  'xsd:boolean': 'boolean',
+  ...Object.fromEntries(INTEGER.map((t) => [`xsd:${t}`, 'integer'])),
+  ...Object.fromEntries(['decimal', 'double', 'float'].map((t) => [`xsd:${t}`, 'decimal'])),
+}
 
-/** Determines kind (and the extra data each kind carries) for a field, by the priority rules. */
-function resolveKind(name, type, ctx) {
-  if (ctx.enums.has(type)) return { kind: 'enum' }
+/**
+ * Kind of a simple (text) type: built-in xsd types by name, named simpleTypes by following their restriction base.
+ * A simpleType whose chain leaves the parsed files, or a union/list, is text ('string').
+ * A type that is neither built-in nor a known simpleType is 'unknown'.
+ */
+function scalarKind(type, ctx) {
+  const seen = new Set()
+  let t = type
+  while (t && !seen.has(t)) {
+    if (t.startsWith('xsd:')) return SCALAR_KINDS[t] ?? 'string'
+    const simple = ctx.simpleTypes?.get(t)
+    if (!simple) break
+    seen.add(t)
+    t = simple.base
+  }
+  return seen.size > 0 ? 'string' : 'unknown'
+}
+
+/** Fields that are `<xsd:element ref="X">` to an abstract X (their refTarget is X). */
+const headRefs = new WeakSet()
+
+const isAbstractElement = (name, ctx) => !!ctx.elements.get(name)?.abstract
+const isConcreteElement = (name, ctx) => ctx.elements.has(name) && !isAbstractElement(name, ctx)
+
+/**
+ * Determines kind (and the extra data each kind carries) for a field, by the priority rules.
+ * `elementRef` is set when the field is `<xsd:element ref="X">`: refTarget is then X when X is an abstract head or
+ * (except for kind 'ref', which points at what is referenced) a concrete element.
+ */
+function resolveKind(name, type, ctx, elementRef) {
+  const { refTarget: referenced, ...base } = baseKind(name, type, ctx)
+  const head = elementRef && isAbstractElement(elementRef, ctx) ? elementRef : undefined
+  const concrete = elementRef && isConcreteElement(elementRef, ctx) ? elementRef : undefined
+  const refTarget = head ?? (base.kind === 'ref' ? referenced ?? concrete : concrete)
+  return { ...base, ...(refTarget ? { refTarget } : {}) }
+}
+
+const enumCache = new WeakMap()
+
+/** ctx.enums plus every named union whose member types are all enums (values in member order, first occurrence wins). */
+function enumsOf(ctx) {
+  let enums = enumCache.get(ctx)
+  if (enums) return enums
+  enums = new Map(ctx.enums)
+  for (const [name, simple] of ctx.simpleTypes ?? []) {
+    const members = simple.memberTypes ?? []
+    if (enums.has(name) || members.length === 0 || !members.every((m) => ctx.enums.has(m))) continue
+    const values = new Map()
+    for (const m of members) for (const v of ctx.enums.get(m).values) if (!values.has(v.value)) values.set(v.value, v)
+    enums.set(name, { name, description: simple.description ?? '', values: [...values.values()] })
+  }
+  enumCache.set(ctx, enums)
+  return enums
+}
+
+function baseKind(name, type, ctx) {
+  const enums = enumsOf(ctx)
+  if (enums.has(type)) return { kind: 'enum' }
   const itemType = ctx.listTypes.get(type)
-  if (itemType && ctx.enums.has(itemType)) return { kind: 'enum', isList: true, type: itemType }
+  if (itemType && enums.has(itemType)) return { kind: 'enum', isList: true, type: itemType }
   if (/Refs?$/.test(name) || type.endsWith('RefStructure')) {
     const strip = (n) => n.replace(/(RefStructure|Refs|Ref)$/, '')
     const refTarget = [type, name].map(strip).find((n) => n && ctx.elements.has(n))
     return { kind: 'ref', ...(refTarget ? { refTarget } : {}) }
   }
-  if (type.endsWith('_RelStructure')) return { kind: 'list', contains: containsOf(type, ctx) }
+  if (type.endsWith('_RelStructure') && ctx.types.has(type)) return { kind: 'list', contains: containsOf(type, ctx) }
   if (ctx.types.has(type)) return { kind: 'complex', structure: type }
-  return { kind: SCALAR_KINDS[type] ?? 'string' }
+  return { kind: scalarKind(type, ctx) }
 }
 
-/** Element particles of a RelStructure type and its bases, direct, in choices or in groups; cardinality comes from the enclosing choice. */
+/**
+ * Element particles of a RelStructure type and its bases, direct, in choices or in groups; cardinality comes from the
+ * enclosing choice. `ref` tells a global element (`ref="X"`) from a local declaration, which carries its own `type`.
+ */
 function containsOf(type, ctx) {
   const result = []
   const visit = (particles, inherited, path) => {
     for (const p of particles) {
       if (p.kind === 'element') {
-        result.push({ name: p.name, minOccurs: inherited?.minOccurs ?? p.minOccurs, maxOccurs: inherited?.maxOccurs ?? p.maxOccurs })
+        result.push({
+          name: p.name,
+          minOccurs: inherited?.minOccurs ?? p.minOccurs,
+          maxOccurs: inherited?.maxOccurs ?? p.maxOccurs,
+          ref: p.ref,
+          ...(!p.ref && p.type ? { type: p.type } : {}),
+        })
       } else if (p.kind === 'choice') visit(p.content, { minOccurs: p.minOccurs, maxOccurs: p.maxOccurs }, path)
       else if (p.kind === 'sequence') visit(p.content, inherited, path)
       else if (p.kind === 'group') {
@@ -235,9 +334,9 @@ function containsOf(type, ctx) {
 }
 
 /** The single place a Field is built. */
-function makeField(ctx, { name, type, isAttribute, minOccurs, maxOccurs, required, choice, origin, description }) {
-  const { kind, isList = false, type: resolvedType = type, ...extra } = resolveKind(name, type, ctx)
-  return {
+function makeField(ctx, { name, type, unknown = false, elementRef, isAttribute, minOccurs, maxOccurs, required, choice, origin, description }) {
+  const { kind, isList = false, type: resolvedType = type, ...extra } = unknown ? { kind: 'unknown' } : resolveKind(name, type, ctx, elementRef)
+  const field = {
     name,
     type: resolvedType,
     kind,
@@ -251,17 +350,31 @@ function makeField(ctx, { name, type, isAttribute, minOccurs, maxOccurs, require
     origin,
     description,
   }
+  if (elementRef && isAbstractElement(elementRef, ctx)) headRefs.add(field)
+  return field
 }
 
-/** Resolves every concrete element, the enums and the flattened structure of each referenced complex type. */
+/**
+ * Resolves every concrete element, the enums, the flattened structure of each referenced complex type (also the
+ * declared types of local elements in `contains`) and the concrete members of every referenced abstract element.
+ */
 export function resolveModel(ctx, partMap) {
   const structures = {}
+  const heads = new Set()
+  const addStructure = (type) => {
+    if (type in structures) return
+    structures[type] = [] // reserve first: guards against cycles
+    structures[type] = resolveType(type, ctx)
+    collect(structures[type])
+  }
   const collect = (fields) => {
     for (const f of fields) {
-      if (f.kind !== 'complex' || f.structure in structures) continue
-      structures[f.structure] = [] // reserve first: guards against cycles
-      structures[f.structure] = resolveType(f.structure, ctx)
-      collect(structures[f.structure])
+      if (headRefs.has(f)) heads.add(f.refTarget)
+      for (const c of f.contains ?? []) {
+        if (c.ref && isAbstractElement(c.name, ctx)) heads.add(c.name)
+        if (!c.ref && c.type && ctx.types.has(c.type)) addStructure(c.type)
+      }
+      if (f.kind === 'complex') addStructure(f.structure)
     }
   }
 
@@ -280,8 +393,30 @@ export function resolveModel(ctx, partMap) {
       fields,
     })
   }
-  elements.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0))
-  return { elements, enums: Object.fromEntries(ctx.enums), structures }
+  elements.sort(byCodePoint)
+  return { elements, enums: Object.fromEntries(enumsOf(ctx)), structures, substitutions: substitutionsFor(heads, ctx) }
 }
 
-export { moduleFromPath, humanizeModule }
+const byCodePoint = (a, b) => {
+  const x = typeof a === 'string' ? a : a.name
+  const y = typeof b === 'string' ? b : b.name
+  return x < y ? -1 : x > y ? 1 : 0
+}
+
+/** For each head: the concrete elements whose substitutionGroup chain reaches it, code-point sorted. */
+function substitutionsFor(heads, ctx) {
+  const members = new Map([...heads].map((h) => [h, []]))
+  for (const [name, el] of ctx.elements) {
+    if (el.abstract) continue
+    const seen = new Set()
+    let group = el.substitutionGroup
+    while (group && !seen.has(group)) {
+      seen.add(group)
+      members.get(group)?.push(name)
+      group = ctx.elements.get(group)?.substitutionGroup
+    }
+  }
+  return Object.fromEntries([...members].map(([h, list]) => [h, list.sort(byCodePoint)]))
+}
+
+export { moduleFromPath }

@@ -2,7 +2,7 @@ import type { Element } from '../types'
 
 export type PartFilter = 'alle' | 0 | 1 | 2 | 3
 
-/** 'stopPlace' → 'Stop place' (samme regel som scripts/parser/naming.js) */
+/** 'stopPlace' → 'Stop place' */
 export function humanizeModule(module: string): string {
   const words = module.replace(/([a-z0-9])([A-Z])/g, '$1 $2').toLowerCase()
   return words.charAt(0).toUpperCase() + words.slice(1)

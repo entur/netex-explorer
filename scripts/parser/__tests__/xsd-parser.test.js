@@ -171,6 +171,65 @@ describe('parseXsd', () => {
     expect(types.get('S').attributeGroupRefs).toEqual(['InnerGroup'])
   })
 
+  it('records named simpleTypes that are not enums (restriction base, union, list)', () => {
+    const { simpleTypes, enums } = parseXsd(wrap(`
+      <xsd:simpleType name="ObjectIdType"><xsd:restriction base="xsd:normalizedString"/></xsd:simpleType>
+      <xsd:simpleType name="StopPlaceIdType"><xsd:restriction base="ObjectIdType"/></xsd:simpleType>
+      <xsd:simpleType name="EitherType"><xsd:union memberTypes="xsd:date xsd:dateTime"/></xsd:simpleType>
+      <xsd:simpleType name="IdListType"><xsd:list itemType="xsd:NMTOKEN"/></xsd:simpleType>
+      <xsd:simpleType name="ColorEnumeration"><xsd:restriction base="xsd:string"><xsd:enumeration value="red"/></xsd:restriction></xsd:simpleType>`))
+    expect(simpleTypes.get('ObjectIdType')).toEqual({ base: 'xsd:normalizedString', memberTypes: [], description: '' })
+    expect(simpleTypes.get('StopPlaceIdType')).toMatchObject({ base: 'ObjectIdType' })
+    expect(simpleTypes.get('EitherType')).toMatchObject({ base: null, memberTypes: ['xsd:date', 'xsd:dateTime'] })
+    expect(simpleTypes.get('IdListType')).toMatchObject({ base: null, memberTypes: [] })
+    expect(simpleTypes.get('ColorEnumeration')).toMatchObject({ base: 'xsd:string' })
+    expect(enums.has('ColorEnumeration')).toBe(true)
+  })
+
+  it('local element with an inline pure extension takes the base as its type', () => {
+    const { types } = parseXsd(wrap(`
+      <xsd:complexType name="PresentationStructure"><xsd:sequence>
+        <xsd:element name="infoLinks" minOccurs="0">
+          <xsd:complexType><xsd:complexContent><xsd:extension base="infoLinks_RelStructure"/></xsd:complexContent></xsd:complexType>
+        </xsd:element>
+      </xsd:sequence></xsd:complexType>`))
+    expect(types.get('PresentationStructure').content[0]).toMatchObject({ name: 'infoLinks', type: 'infoLinks_RelStructure', minOccurs: '0' })
+  })
+
+  it('local element with an inline type that has own content gets a named anonymous type', () => {
+    const { types } = parseXsd(wrap(`
+      <xsd:group name="OrganisationGroup"><xsd:sequence>
+        <xsd:element name="ValidityPeriod">
+          <xsd:complexType><xsd:complexContent><xsd:restriction base="ValidBetween_VersionStructure">
+            <xsd:sequence><xsd:element name="FromDate" type="xsd:dateTime"/></xsd:sequence>
+          </xsd:restriction></xsd:complexContent></xsd:complexType>
+        </xsd:element>
+        <xsd:element name="languages">
+          <xsd:complexType><xsd:sequence><xsd:element name="LanguageUsage" type="LanguageUsageStructure" maxOccurs="unbounded"/></xsd:sequence></xsd:complexType>
+        </xsd:element>
+      </xsd:sequence></xsd:group>`))
+    expect(types.get('OrganisationGroup/ValidityPeriod')).toMatchObject({ base: 'ValidBetween_VersionStructure', derivation: 'restriction' })
+    expect(types.get('OrganisationGroup/languages').content[0]).toMatchObject({ name: 'LanguageUsage' })
+  })
+
+  it('local element with an inline simpleType takes the restriction base as its type', () => {
+    const { types, groups } = parseXsd(wrap(`
+      <xsd:group name="CrossingEquipmentGroup"><xsd:sequence>
+        <xsd:element name="CrossingType" minOccurs="0"><xsd:simpleType><xsd:restriction base="CrossingTypeEnumeration"/></xsd:simpleType></xsd:element>
+      </xsd:sequence></xsd:group>
+      <xsd:complexType name="T"><xsd:sequence>
+        <xsd:element name="Days"><xsd:simpleType><xsd:restriction base="xsd:normalizedString"><xsd:length value="7"/></xsd:restriction></xsd:simpleType></xsd:element>
+      </xsd:sequence></xsd:complexType>`))
+    expect(groups.get('CrossingEquipmentGroup').content[0]).toMatchObject({ name: 'CrossingType', type: 'CrossingTypeEnumeration' })
+    expect(types.get('T').content[0]).toMatchObject({ name: 'Days', type: 'xsd:normalizedString' })
+  })
+
+  it('an attribute without type is xsd:anySimpleType (the XSD default)', () => {
+    const { types } = parseXsd(wrap(`
+      <xsd:complexType name="T"><xsd:attribute name="targetPlatform"/></xsd:complexType>`))
+    expect(types.get('T').attributes[0].type).toBe('xsd:anySimpleType')
+  })
+
   it('keeps use="prohibited"', () => {
     const { types } = parseXsd(wrap(`
       <xsd:complexType name="T"><xsd:attribute name="a" type="xsd:string" use="prohibited"/></xsd:complexType>`))

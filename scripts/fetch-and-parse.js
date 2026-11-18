@@ -3,6 +3,7 @@ import { join, dirname } from 'path'
 import { fileURLToPath } from 'url'
 import { parseXsd } from './parser/xsd-parser.js'
 import { resolveModel } from './parser/model-resolver.js'
+import { isSchemaFile } from './parser/naming.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const DATA_DIR = join(__dirname, '../public/data')
@@ -67,7 +68,7 @@ async function fetchText(path, version = 'master') {
 }
 
 /**
- * Recursively list all XSD _version/_support files under a top-level directory.
+ * Recursively list all XSD files under a top-level directory.
  * @param {string} topDir
  * @param {string} version
  * @returns {Promise<string[]>}
@@ -79,10 +80,7 @@ async function listXsdFilesDeep(topDir, version = 'master') {
     if (entry.type === 'dir') {
       const nested = await listXsdFilesDeep(entry.path, version)
       files.push(...nested)
-    } else if (
-      entry.name.endsWith('.xsd') &&
-      (entry.name.includes('_version') || entry.name.includes('_support'))
-    ) {
+    } else if (isSchemaFile(entry.name)) {
       files.push(entry.path)
     }
   }
@@ -92,7 +90,7 @@ async function listXsdFilesDeep(topDir, version = 'master') {
 async function buildModel(version = 'master') {
   const ctx = {
     elements: new Map(), types: new Map(), groups: new Map(),
-    enums: new Map(), listTypes: new Map(), attributeGroups: new Map(),
+    enums: new Map(), listTypes: new Map(), attributeGroups: new Map(), simpleTypes: new Map(),
   }
   const partMap = new Map()
 
@@ -120,9 +118,9 @@ async function buildModel(version = 'master') {
   }
 
   console.log('  Resolving model...')
-  const { elements, enums, structures } = resolveModel(ctx, partMap)
-  console.log(`  ✓ Resolved ${elements.length} elements, ${Object.keys(enums).length} enums, ${Object.keys(structures).length} structures`)
-  return { elements, enums, structures }
+  const { elements, enums, structures, substitutions } = resolveModel(ctx, partMap)
+  console.log(`  ✓ Resolved ${elements.length} elements, ${Object.keys(enums).length} enums, ${Object.keys(structures).length} structures, ${Object.keys(substitutions).length} substitution groups`)
+  return { elements, enums, structures, substitutions }
 }
 
 async function buildExamplesJson(version) {
@@ -167,11 +165,11 @@ async function main() {
   for (const version of branches) {
     console.log(`\n${'='.repeat(60)}\nProcessing ${version}\n${'='.repeat(60)}`)
     try {
-      const { elements, enums, structures } = await buildModel(version)
+      const { elements, enums, structures, substitutions } = await buildModel(version)
       const examples = await buildExamplesJson(version)
       const fetchedAt = new Date().toISOString()
       const file = `netex-${version}.json`
-      writeFileSync(join(DATA_DIR, file), JSON.stringify({ version, fetchedAt, elements, enums, structures, examples }))
+      writeFileSync(join(DATA_DIR, file), JSON.stringify({ version, fetchedAt, elements, enums, structures, substitutions, examples }))
       console.log(`  ✓ Wrote ${file}`)
       versionsData.push({ version, file, elementCount: elements.length, enumCount: Object.keys(enums).length, fetchedAt })
     } catch (err) {

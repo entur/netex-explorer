@@ -32,6 +32,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # Parser tests and invariants for the generated data; a failure stops the commit
+      - name: Check generated data
+        run: npx vitest run scripts
+
       - name: Commit updated data files
         run: |
           git config user.name "github-actions[bot]"
