@@ -5,6 +5,11 @@ on:
     # Run at 02:00 UTC every night
     - cron: '0 2 * * *'
   workflow_dispatch:  # Allow manual trigger from GitHub UI
+    inputs:
+      max_requests:
+        description: 'Maks antall Gemini-kall i explain-jobben (standard 2000; hev for første fulle kjøring)'
+        required: false
+        type: string
 
 jobs:
   update:
@@ -43,7 +48,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add public/data
+          # KI-tekster skal bare nå main via en PR et menneske har merget
+          git add public/data ':!public/data/explanations-*.json'
           if git diff --staged --quiet; then
             echo "No changes to commit"
             echo "changed=false" >> "$GITHUB_OUTPUT"
@@ -63,3 +69,59 @@ jobs:
       pages: write
       id-token: write
     uses: ./.github/workflows/deploy-pages.yml
+
+  # Genererer norske KI-forklaringer og legger dem i en PR (aldri direkte på main).
+  # Kjører etter update også når ingen data er endret. Feiler jobben, påvirkes ikke update/deploy.
+  explain:
+    needs: update
+    if: ${{ vars.GOOGLE_CLOUD_PROJECT != '' && vars.GCP_WIF_PROVIDER != '' && vars.GCP_SERVICE_ACCOUNT != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          ref: main
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - name: Generate explanations
+        run: npm run explain
+        env:
+          GOOGLE_CLOUD_PROJECT: ${{ vars.GOOGLE_CLOUD_PROJECT }}
+          GOOGLE_CLOUD_LOCATION: ${{ vars.GOOGLE_CLOUD_LOCATION || 'europe-west1' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash-lite' }}
+          MAX_REQUESTS: ${{ inputs.max_requests || '2000' }}
+
+      - name: Check explain scripts
+        run: npx vitest run scripts/explain
+
+      - name: Create pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: ki-forklaringer
+          base: main
+          title: 'chore: KI-genererte forklaringer'
+          body-path: explain-summary.md
+          add-paths: |
+            data/explanations-cache.json
+            public/data/explanations-*.json
+          commit-message: 'chore: oppdater KI-genererte forklaringer'
+          delete-branch: true
