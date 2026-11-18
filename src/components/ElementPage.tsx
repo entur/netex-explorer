@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { Heading1 } from '@entur/typography'
+import { partName } from '../model/parts'
+import { VisuallyHidden } from '@entur/a11y'
 import { Tag } from '@entur/layout'
 import { Tabs, TabList, Tab, TabPanels, TabPanel } from '@entur/tab'
 import type { LoadedFile, VersionData } from '../types'
@@ -12,7 +14,6 @@ import './ElementPage.css'
 
 export type ElementTab = 'felter' | 'struktur' | 'xml'
 const TABS: ElementTab[] = ['felter', 'struktur', 'xml']
-const PART_LABELS = ['Del 0', 'Del 1', 'Del 2', 'Del 3']
 
 export interface ElementPageProps {
   element: string
@@ -36,7 +37,10 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
       <header className="element-page__header">
         <Heading1>{element.name}</Heading1>
         <div className="element-page__tags">
-          <Tag>{PART_LABELS[element.part]}</Tag>
+          <Tag title={partName(element.part).full}>
+            {partName(element.part).label}
+            <VisuallyHidden> ({partName(element.part).full})</VisuallyHidden>
+          </Tag>
           <Tag>{humanizeModule(element.module)}</Tag>
         </div>
         {element.description && <p className="element-page__description">{element.description}</p>}

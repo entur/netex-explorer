@@ -3,6 +3,7 @@ import { TextField, SegmentedControl, SegmentedChoice } from '@entur/form'
 import { SideNavigation } from '@entur/menu/beta'
 import type { VersionData } from '../types'
 import { groupByModule, type PartFilter } from '../model/navigation'
+import { partName } from '../model/parts'
 import { search } from '../model/search'
 import { toSearch, type UrlState } from '../model/urlState'
 import './Sidebar.css'
@@ -13,12 +14,9 @@ export interface SidebarProps {
   onNavigate: (target: { element?: string; enum?: string }) => void
 }
 
-const PART_CHOICES: { value: string; label: string }[] = [
+const PART_CHOICES: { value: string; label: string; title?: string }[] = [
   { value: 'alle', label: 'Alle' },
-  { value: '0', label: 'Rammeverk' },
-  { value: '1', label: 'Del 1' },
-  { value: '2', label: 'Del 2' },
-  { value: '3', label: 'Del 3' },
+  ...[0, 1, 2, 3].map((p) => ({ value: String(p), label: partName(p).label, title: partName(p).full })),
 ]
 
 function href(state: UrlState, target: { element?: string; enum?: string }) {
@@ -68,7 +66,7 @@ export function Sidebar({ data, state, onNavigate }: SidebarProps) {
         onChange={(v) => setPart(v === 'alle' || v === null ? 'alle' : (Number(v) as PartFilter))}
       >
         {PART_CHOICES.map((c) => (
-          <SegmentedChoice key={c.value} value={c.value}>
+          <SegmentedChoice key={c.value} value={c.value} title={c.title} aria-label={c.title ? `${c.label} – ${c.title}` : undefined}>
             {c.label}
           </SegmentedChoice>
         ))}

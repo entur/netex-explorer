@@ -40,3 +40,12 @@
     display: none;
   }
 }
+
+/* Delvalg med navn er bredere enn sidekolonnen: la valgene brytes i stedet for å klippes */
+.sidebar .eds-segmented-control .eds-segmented-control__choices {
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.sidebar .eds-segmented-control .eds-segmented-choice {
+  flex: 1 1 auto;
+}
