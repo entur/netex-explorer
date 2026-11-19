@@ -3,15 +3,23 @@
   flex-direction: column;
   gap: var(--space-extra-small);
   padding: var(--space-small) var(--space-medium);
+  border: 1px solid var(--basecolors-stroke-default);
+  /* Samme lavendel som KI-taggen, så boksen henger sammen med merkingen */
+  border-left: 4px solid var(--components-layout-tag-stroke-default-lavender);
   border-radius: var(--space-extra-small);
-  background: var(--basecolors-frame-subdued);
+  background: var(--basecolors-frame-elevated);
 }
 .ai-explanation p {
   margin: 0;
 }
-.ai-explanation__label {
-  color: var(--basecolors-text-subdued);
-  font-weight: 600;
+.ai-explanation__header {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-small);
+}
+.ai-explanation__tag svg {
+  flex: none;
 }
 .ai-explanation__note {
   color: var(--basecolors-text-subdued);

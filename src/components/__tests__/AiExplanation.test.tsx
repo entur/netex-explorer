@@ -26,6 +26,17 @@ describe('AiExplanation', () => {
     expect(screen.getByText(/kan inneholde feil/)).toBeInTheDocument()
   })
 
+  it('har overskriften «Forklaring» og en KI-generert-tag med Linje-ikonet', () => {
+    const { container } = render(<AiExplanation text="En linje er …" />)
+    const header = container.querySelector('.ai-explanation__header')
+    expect(header).toHaveTextContent(/^ForklaringKI-generert$/)
+    expect(screen.queryByRole('heading')).toBeNull()
+    const icon = container.querySelector('.ai-explanation__tag svg')
+    expect(icon).not.toBeNull()
+    expect(icon).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('.ai-explanation__tag')).toHaveTextContent('KI-generert')
+  })
+
   it('rendrer ingenting uten tekst', () => {
     const { container } = render(<AiExplanation text={undefined} />)
     expect(container).toBeEmptyDOMElement()
