@@ -47,7 +47,7 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
           <Tag>{humanizeModule(element.module)}</Tag>
         </div>
         {element.description && <p className="element-page__description">{element.description}</p>}
-        <AiExplanation text={explanation} />
+        <AiExplanation text={explanation} subject={element.name} />
         <AncestorPills
           element={element}
           data={data}

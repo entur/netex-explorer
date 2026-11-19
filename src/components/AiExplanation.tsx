@@ -1,9 +1,19 @@
+import { useContext } from 'react'
 import { NewIcon } from '@entur/icons'
 import { Tag } from '@entur/layout'
-import { Heading5 } from '@entur/typography'
+import { Heading5, Link } from '@entur/typography'
+import { ExplanationsContext } from '../model/explanations'
+import { explanationIssueUrl } from '../model/repo'
 import './AiExplanation.css'
 
-export function AiExplanation({ text }: { text: string | undefined }) {
+export interface AiExplanationProps {
+  text: string | undefined
+  /** Hva forklaringen gjelder (element, enum eller <type>.<felt>); brukes i «Meld feil i forklaringen» */
+  subject?: string
+}
+
+export function AiExplanation({ text, subject }: AiExplanationProps) {
+  const version = useContext(ExplanationsContext)?.version
   if (!text) return null
   return (
     <aside className="ai-explanation" aria-label="Forklaring (KI-generert)">
@@ -19,7 +29,24 @@ export function AiExplanation({ text }: { text: string | undefined }) {
         </Tag>
       </div>
       <p className="ai-explanation__text">{text}</p>
-      <p className="ai-explanation__note">Laget av KI og kan inneholde feil. Beskrivelsen fra XSD-en er den offisielle.</p>
+      <p className="ai-explanation__note">
+        Laget av KI og kan inneholde feil. Beskrivelsen fra XSD-en er den offisielle.
+        {version && subject && (
+          <>
+            {' '}
+            <Link
+              href={explanationIssueUrl({ version, subject, text })}
+              target="_blank"
+              rel="noopener noreferrer"
+              external
+              ariaLabelExternalIcon="(åpnes i ny fane på GitHub)"
+              margin="none"
+            >
+              Meld feil i forklaringen
+            </Link>
+          </>
+        )}
+      </p>
     </aside>
   )
 }

@@ -56,7 +56,7 @@ export function FieldDetail({ field: f, data, onNavigate }: FieldDetailProps) {
         <dd>{f.origin}</dd>
       </dl>
       {f.description && <p className="field-detail__description">{f.description}</p>}
-      <AiExplanation text={explanation} />
+      <AiExplanation text={explanation} subject={`${f.origin}.${f.name}`} />
       {f.kind === 'enum' && <EnumValueList enumType={data.enums[f.type]} typeName={f.type} />}
     </section>
   )

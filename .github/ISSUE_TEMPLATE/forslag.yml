@@ -1,0 +1,16 @@
+name: Forslag
+description: Noe du savner, eller ønsker annerledes.
+labels: [forslag]
+body:
+  - type: textarea
+    id: behov
+    attributes:
+      label: Hva trenger du?
+      description: Beskriv hva du prøver å få til, og hva som gjør det vanskelig i dag.
+    validations:
+      required: true
+  - type: textarea
+    id: forslag
+    attributes:
+      label: Forslag til løsning
+      description: Valgfritt. Har du en idé om hvordan det kan løses?

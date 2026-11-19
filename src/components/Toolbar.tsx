@@ -1,5 +1,8 @@
 import { Dropdown } from '@entur/dropdown'
 import type { NormalizedDropdownItemType } from '@entur/dropdown'
+import { GithubIcon } from '@entur/icons'
+import { Link } from '@entur/typography'
+import { REPO_URL } from '../model/repo'
 import { ExampleLoader } from './ExampleLoader'
 import type { LoadedFile, NeTExExample } from '../types'
 import './Toolbar.css'
@@ -27,7 +30,20 @@ export function Toolbar({ versions, version, onVersionChange, examples, onFileLo
           }}
         />
       </div>
-      <ExampleLoader examples={examples} onFileLoaded={onFileLoaded} />
+      <div className="toolbar__actions">
+        <ExampleLoader examples={examples} onFileLoaded={onFileLoaded} />
+        <Link
+          href={REPO_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+          margin="none"
+          className="toolbar__repo"
+          aria-label="Kildekode på GitHub (åpnes i ny fane)"
+        >
+          <GithubIcon aria-hidden="true" />
+          Kildekode på GitHub
+        </Link>
+      </div>
     </div>
   )
 }

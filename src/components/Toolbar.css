@@ -9,3 +9,17 @@
 .toolbar__version {
   min-width: 12rem;
 }
+
+.toolbar__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-medium);
+}
+
+.toolbar__repo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-extra-small);
+  white-space: nowrap;
+}
