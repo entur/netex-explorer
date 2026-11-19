@@ -35,8 +35,11 @@
   outline: 2px solid var(--basecolors-stroke-focus);
   outline-offset: -2px;
 }
+/* Som valgt element i Linjes SideNavigation: highlight-fargen bare som kant til venstre (den er en
+   stroke-token), og en dempet flate som følger lys/mørk modus, så teksten beholder kontrasten. */
 .structure-tab__item--selected {
-  background: var(--basecolors-frame-highlight);
+  background: var(--basecolors-frame-subdued);
+  box-shadow: inset 0.25rem 0 0 var(--basecolors-frame-highlight);
 }
 .structure-tab__content {
   display: flex;
