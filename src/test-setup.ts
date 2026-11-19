@@ -1,4 +1,4 @@
-import '@testing-library/jest-dom'
+import '@testing-library/jest-dom/vitest'
 
 // jsdom: composedPath() inneholder window, og Entur sin useOnClickOutside (brukt av OverflowMenu)
 // sender det til Node.contains(), som kaster. Nettlesere returnerer false her.
