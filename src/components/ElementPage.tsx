@@ -10,6 +10,8 @@ import { AncestorPills } from './AncestorPills'
 import { FieldsTab } from './FieldsTab'
 import { StructureTab } from './StructureTab'
 import { InstanceTab } from './InstanceTab'
+import { AiExplanation } from './AiExplanation'
+import { useExplanation } from '../model/explanations'
 import './ElementPage.css'
 
 export type ElementTab = 'felter' | 'struktur' | 'xml'
@@ -26,6 +28,7 @@ export interface ElementPageProps {
 
 export function ElementPage({ element: name, data, tab, onTab, onNavigate, file = null }: ElementPageProps) {
   const element = data.elements.find((e) => e.name === name)
+  const explanation = useExplanation('types', name)
   const [originState, setOriginState] = useState<{ name: string; origin: string | null }>({ name, origin: null })
   if (!element) return null
   const activeTab: ElementTab = tab === 'xml' && !file ? 'felter' : tab
@@ -44,6 +47,7 @@ export function ElementPage({ element: name, data, tab, onTab, onNavigate, file 
           <Tag>{humanizeModule(element.module)}</Tag>
         </div>
         {element.description && <p className="element-page__description">{element.description}</p>}
+        <AiExplanation text={explanation} />
         <AncestorPills
           element={element}
           data={data}

@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "fetch-schema": "node scripts/fetch-and-parse.js"
+    "fetch-schema": "node scripts/fetch-and-parse.js",
+    "explain": "node scripts/explain.js"
   },
   "dependencies": {
     "@entur/a11y": "^0.4.2",
@@ -36,6 +37,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",
+    "@google/genai": "^3.6.0",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",
     "@testing-library/user-event": "^14.6.12",

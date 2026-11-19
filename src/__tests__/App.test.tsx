@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { act } from 'react'
 import App from '../App'
 import { fixture } from '../model/__tests__/fixture'
-import type { VersionData } from '../types'
+import type { Explanations, VersionData } from '../types'
 
 const v13: VersionData = {
   ...fixture,
@@ -21,10 +21,20 @@ const manifest = {
   ],
 }
 
-function mockFetch() {
+function explanationsFor(version: string): Explanations {
+  return { version, model: 'test', generatedAt: 'x', types: { StopPlace: 'KI om stoppested', Quay: 'KI om plattform' }, fields: {}, enums: {} }
+}
+
+function mockFetch(explanations: (url: string) => Promise<Response> | null = () => null) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (url: string) => {
+      if (url.includes('explanations-')) {
+        return (
+          explanations(url) ??
+          (({ ok: false, status: 404, json: async () => ({}) }) as Response)
+        )
+      }
       const body = url.endsWith('versions.json')
         ? manifest
         : url.endsWith('netex-v2.0.json')
@@ -105,5 +115,46 @@ describe('App', () => {
     window.history.replaceState(null, '', '/?v=v9.9')
     render(<App />)
     expect(await screen.findByText('Kunne ikke laste data for v9.9')).toBeInTheDocument()
+  })
+
+  it('App virker når forklaringsfilen gir 404', async () => {
+    window.history.replaceState(null, '', '/?element=StopPlace')
+    render(<App />)
+    expect(await screen.findByRole('heading', { name: 'StopPlace' })).toBeInTheDocument()
+    await waitFor(() => expect(fetch).toHaveBeenCalledWith(expect.stringContaining('explanations-v2.0.json')))
+    expect(screen.queryByRole('complementary', { name: 'Forklaring (KI-generert)' })).not.toBeInTheDocument()
+    expect(screen.queryByText('Kunne ikke laste data', { exact: false })).not.toBeInTheDocument()
+  })
+
+  it('App viser forklaring når filen finnes', async () => {
+    mockFetch((url) =>
+      url.endsWith('explanations-v2.0.json')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => explanationsFor('v2.0') } as Response)
+        : null,
+    )
+    window.history.replaceState(null, '', '/?element=StopPlace')
+    render(<App />)
+    expect(await screen.findByRole('complementary', { name: 'Forklaring (KI-generert)' })).toHaveTextContent(
+      'KI om stoppested',
+    )
+  })
+
+  it('App viser ikke forrige versjons forklaringer etter versjonsbytte', async () => {
+    mockFetch((url) =>
+      url.endsWith('explanations-v2.0.json')
+        ? Promise.resolve({ ok: true, status: 200, json: async () => explanationsFor('v2.0') } as Response)
+        : url.endsWith('explanations-v1.3.json')
+          ? new Promise<Response>(() => {})
+          : null,
+    )
+    window.history.replaceState(null, '', '/?element=Quay')
+    render(<App />)
+    await screen.findByRole('heading', { name: 'Quay' })
+    expect(await screen.findByRole('complementary', { name: 'Forklaring (KI-generert)' })).toHaveTextContent('KI om plattform')
+    await userEvent.click(await screen.findByRole('combobox', { name: /Versjon/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'v1.3' }))
+    await waitFor(() => expect(window.location.search).toContain('v=v1.3'))
+    expect(await screen.findByRole('heading', { name: 'Quay' })).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Forklaring (KI-generert)' })).not.toBeInTheDocument()
   })
 })

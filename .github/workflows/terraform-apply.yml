@@ -1,0 +1,31 @@
+name: terraform-apply
+
+# Anvender terraform/ mot prd med Enturs gjenbrukbare arbeidsflyt når en gjennomgått endring
+# flettes til main. Kjører i GitHub-miljøet prd, altså som prd-tjenestekontoen fra
+# .entur/cicd.yaml. Bare betrodd kode fra main kjøres her. Mønster: entur/ai-registry.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform-apply.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: terraform-apply
+  cancel-in-progress: false
+
+jobs:
+  apply-prd:
+    name: Apply (prd)
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    uses: entur/gha-terraform/.github/workflows/apply.yml@67c83c025c1810b54a77624ca6090a46dcac9c94   # v3.0.0
+    with:
+      environment: prd
+      directory: terraform
+    secrets: inherit

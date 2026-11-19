@@ -1,0 +1,19 @@
+.ai-explanation {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-extra-small);
+  padding: var(--space-small) var(--space-medium);
+  border-radius: var(--space-extra-small);
+  background: var(--basecolors-frame-subdued);
+}
+.ai-explanation p {
+  margin: 0;
+}
+.ai-explanation__label {
+  color: var(--basecolors-text-subdued);
+  font-weight: 600;
+}
+.ai-explanation__note {
+  color: var(--basecolors-text-subdued);
+  font-size: 0.875em;
+}

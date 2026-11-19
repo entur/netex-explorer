@@ -3,6 +3,8 @@ import { fieldLabel } from '../model/elementName'
 import { KindBadge } from './KindBadge'
 import { EnumValueList } from './EnumValueList'
 import { AbstractHead, ElementName } from './ElementRef'
+import { AiExplanation } from './AiExplanation'
+import { useExplanation } from '../model/explanations'
 import './FieldDetail.css'
 
 export interface FieldDetailProps {
@@ -30,6 +32,7 @@ function TypeValue({ field: f, data, onNavigate }: FieldDetailProps) {
 }
 
 export function FieldDetail({ field: f, data, onNavigate }: FieldDetailProps) {
+  const explanation = useExplanation('fields', `${f.origin}.${f.name}`)
   return (
     <section className="field-detail" aria-label={`Detaljer for ${fieldLabel(f)}`}>
       <h3 className="field-detail__name">{fieldLabel(f)}</h3>
@@ -53,6 +56,7 @@ export function FieldDetail({ field: f, data, onNavigate }: FieldDetailProps) {
         <dd>{f.origin}</dd>
       </dl>
       {f.description && <p className="field-detail__description">{f.description}</p>}
+      <AiExplanation text={explanation} />
       {f.kind === 'enum' && <EnumValueList enumType={data.enums[f.type]} typeName={f.type} />}
     </section>
   )

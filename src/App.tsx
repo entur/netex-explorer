@@ -6,15 +6,17 @@ import { EnumPage } from './components/EnumPage'
 import { AppLayout } from './components/AppLayout'
 import { Sidebar } from './components/Sidebar'
 import { Toolbar } from './components/Toolbar'
-import { fetchManifest, fetchVersion } from './data/loadVersion'
+import { fetchExplanations, fetchManifest, fetchVersion } from './data/loadVersion'
 import { readUrlState, toSearch, type UrlState } from './model/urlState'
-import type { LoadedFile, VersionData } from './types'
+import { ExplanationsContext } from './model/explanations'
+import type { Explanations, LoadedFile, VersionData } from './types'
 
 export default function App() {
   const [state, setState] = useState<UrlState>(() => readUrlState(window.location.search))
   const [versions, setVersions] = useState<string[]>([])
   const [data, setData] = useState<VersionData | null>(null)
   const [failedVersion, setFailedVersion] = useState<string | null>(null)
+  const [explanations, setExplanations] = useState<{ version: string; data: Explanations | null } | null>(null)
   const [loadedFile, setLoadedFile] = useState<LoadedFile | null>(null)
 
   useEffect(() => {
@@ -53,6 +55,16 @@ export default function App() {
     }
   }, [state.v])
 
+  useEffect(() => {
+    let cancelled = false
+    fetchExplanations(state.v).then((d) => {
+      if (!cancelled) setExplanations({ version: state.v, data: d })
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [state.v])
+
   const update = useCallback((next: UrlState) => {
     window.history.pushState(null, '', `${import.meta.env.BASE_URL}${toSearch(next)}`)
     setState(next)
@@ -70,6 +82,8 @@ export default function App() {
       notice = `${state.enum} finnes ikke i ${state.v}`
     }
   }
+
+  const currentExplanations = explanations?.version === state.v ? explanations.data : null
 
   const versionOptions = versions.includes(state.v) || versions.length === 0 ? versions : [...versions, state.v]
 
@@ -99,7 +113,7 @@ export default function App() {
       ) : loading ? (
         <Loader>Laster {state.v} …</Loader>
       ) : (
-        <>
+        <ExplanationsContext.Provider value={currentExplanations}>
           {notice && <BannerAlertBox variant="warning">{notice}</BannerAlertBox>}
           {current && state.element && current.elements.some((e) => e.name === state.element) ? (
             <ElementPage
@@ -119,7 +133,7 @@ export default function App() {
           ) : (
             !state.enum && <p>Velg et element</p>
           )}
-        </>
+        </ExplanationsContext.Provider>
       )}
     </AppLayout>
   )
