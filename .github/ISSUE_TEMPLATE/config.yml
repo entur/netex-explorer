@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Bidragsguide
+    url: https://github.com/entur/netex-explorer/blob/main/CONTRIBUTING.md
+    about: Slik kjører du appen, tester og sender inn endringer.

@@ -1,0 +1,27 @@
+name: Feil i appen
+description: Noe virker ikke, eller appen viser noe annet enn XSD-en sier.
+labels: [feil]
+body:
+  - type: textarea
+    id: hva
+    attributes:
+      label: Hva skjedde?
+      description: Beskriv feilen. Legg gjerne ved skjermbilde.
+    validations:
+      required: true
+  - type: textarea
+    id: forventet
+    attributes:
+      label: Hva forventet du?
+    validations:
+      required: true
+  - type: input
+    id: lenke
+    attributes:
+      label: Lenke til siden
+      description: Kopier adressen fra nettleseren, så ser vi versjon, element og fane.
+  - type: input
+    id: nettleser
+    attributes:
+      label: Nettleser og enhet
+      placeholder: f.eks. Firefox 150 på Mac

@@ -164,4 +164,9 @@ React 19, TypeScript (strict), Vite, Entur Linje (`@entur/*`), fast-xml-parser, 
 
 ## Bidra
 
-Se [docs/superpowers/](docs/superpowers/) for planer og design-dokumenter.
+Se [CONTRIBUTING.md](CONTRIBUTING.md) for hvordan du melder feil, retter KI-forklaringer og sender inn endringer.
+Planer og design-dokumenter ligger i [docs/superpowers/](docs/superpowers/).
+
+## Lisens
+
+[EUPL-1.2](LICENSE)

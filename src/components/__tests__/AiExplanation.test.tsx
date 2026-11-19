@@ -37,6 +37,26 @@ describe('AiExplanation', () => {
     expect(container.querySelector('.ai-explanation__tag')).toHaveTextContent('KI-generert')
   })
 
+  it('har lenke for å melde feil i forklaringen, utfylt med versjon og hva den gjelder', () => {
+    render(
+      <ExplanationsContext.Provider value={explanations}>
+        <AiExplanation text="Et stoppested er …" subject="StopPlace" />
+      </ExplanationsContext.Provider>,
+    )
+    const link = screen.getByRole('link', { name: /Meld feil i forklaringen/ })
+    const url = new URL(link.getAttribute('href')!)
+    expect(url.searchParams.get('template')).toBe('ki-forklaring.yml')
+    expect(url.searchParams.get('versjon')).toBe('v2.0')
+    expect(url.searchParams.get('gjelder')).toBe('StopPlace')
+    expect(url.searchParams.get('tekst')).toBe('Et stoppested er …')
+    expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  it('viser ikke meld-feil-lenken uten versjon eller hva den gjelder', () => {
+    render(<AiExplanation text="Et stoppested er …" subject="StopPlace" />)
+    expect(screen.queryByRole('link', { name: /Meld feil/ })).toBeNull()
+  })
+
   it('rendrer ingenting uten tekst', () => {
     const { container } = render(<AiExplanation text={undefined} />)
     expect(container).toBeEmptyDOMElement()

@@ -1,0 +1,35 @@
+name: Feil i KI-forklaring
+description: En norsk KI-generert forklaring er feil, misvisende eller uklar.
+title: "Feil i KI-forklaring"
+labels: [ki-forklaring]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Forklaringene er laget av KI og gjennomgått med stikkprøver. Det enkleste er å trykke «Meld feil i forklaringen» i appen, så er feltene under fylt ut.
+  - type: input
+    id: versjon
+    attributes:
+      label: NeTEx-versjon
+      placeholder: f.eks. v2.0
+    validations:
+      required: true
+  - type: input
+    id: gjelder
+    attributes:
+      label: Hva forklaringen gjelder
+      description: Element, enum eller felt (<type>.<felt>).
+      placeholder: f.eks. StopPlace eller GroupOfEntities.Name
+    validations:
+      required: true
+  - type: textarea
+    id: tekst
+    attributes:
+      label: Forklaringen slik den står
+  - type: textarea
+    id: problem
+    attributes:
+      label: Hva er feil?
+      description: Hva stemmer ikke, og hva burde det stå? Henvis gjerne til NeTEx-dokumentasjonen.
+    validations:
+      required: true

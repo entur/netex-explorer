@@ -1,0 +1,40 @@
+name: CI
+
+# Kjører tester, lint og bygg på hver pull request mot main, slik at feil stoppes før merge.
+# Bare lesetilgang og ingen skyidentitet, så det er trygt også for PR-er fra forks.
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Lint
+        run: npm run lint
+
+      # tsc -b og vite build, som i deploy-pages.yml
+      - name: Build
+        run: npm run build

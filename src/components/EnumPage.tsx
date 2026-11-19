@@ -25,7 +25,7 @@ export function EnumPage({ enumType, data, onNavigate }: EnumPageProps) {
       <header className="enum-page__header">
         <Heading1>{enumType.name}</Heading1>
         {enumType.description && <p className="enum-page__description">{enumType.description}</p>}
-        <AiExplanation text={explanation} />
+        <AiExplanation text={explanation} subject={enumType.name} />
       </header>
 
       <section aria-labelledby="enum-page-values">
