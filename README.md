@@ -141,8 +141,9 @@ Mønsteret er det samme som i `entur/ai-registry`.
 4. Slå på *Allow GitHub Actions to create and approve pull requests* under *Settings → Actions → General*.
 5. **Registrer bruken i KI-løypa**: <https://ki.entur.no/ki-loypa>.
 6. **Prøvekjøring**: sett repo-variabelen `EXPLAIN_ENABLED` til `true` og kjør `update-data.yml` manuelt med
-   `max_requests=20`. Se over språket i PR-en som kommer, lukk den, og kjør så med `max_requests=3000` for første fulle
-   kjøring. Sett `EXPLAIN_ENABLED` til noe annet enn `true` for å slå av modellkallene uten å stoppe dataoppdateringen.
+   `max_requests=20`. Se over språket i PR-en som kommer, og la den stå åpen. Kjør så med `max_requests=3000` for første
+   fulle kjøring (rundt én time). Den henter hurtigbufferen fra PR-grenen, beholder prøvetekstene og oppdaterer samme PR.
+   Sett `EXPLAIN_ENABLED` til noe annet enn `true` for å slå av modellkallene uten å stoppe dataoppdateringen.
 
 ## NeTEx-versjoner
 
