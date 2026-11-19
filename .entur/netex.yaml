@@ -1,0 +1,22 @@
+# Selvbetjeningsmanifest for Google Cloud-prosjektet ent-netex-prd (entur/ai,
+# guides/platform/self-service.md). Prosjektet skal bare bære Vertex AI-kall fra GitHub Actions
+# i dette repoet (nattlige KI-genererte forklaringer av NeTEx-typer) — ingen tjeneste, ingen
+# Kubernetes. Appen selv ligger på GitHub Pages. Kun prd. metadata.id er uforanderlig.
+# Aktivering av Vertex AI API og roles/aiplatform.user til prd-miljøets GitHub-tjenestekonto
+# gjøres med Terraform i terraform/ når prosjektet finnes.
+apiVersion: orchestrator.entur.io/apps/v1
+kind: GoogleCloudApplication
+metadata:
+  id: netex
+  displayName: NeTEx-utforsker
+  name: netex-explorer
+  owner: team-produkt
+spec:
+  environments:
+    - prd
+  repositories:
+    - netex-explorer
+  kubernetes:
+    enabled: false
+  terraform:
+    createBackend: true
